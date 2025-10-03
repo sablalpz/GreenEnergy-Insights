@@ -13,7 +13,18 @@ class EnergyData(db.Model):
     __tablename__ = "energy_data"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     timestamp = db.Column(db.DateTime, unique=True, nullable=False)
-    value = db.Column(db.Float, nullable=False)
+    precio = db.Column(db.Float, nullable=False)
+    potencia = db.Column(db.Float, nullable=True)
+    geo_id = db.Column(db.Integer, nullable=True)
+    geo_name = db.Column(db.String(255), nullable=True)
+    dia_semana = db.Column(db.Integer, nullable=True)
+    hora_dia = db.Column(db.Integer, nullable=True)
+    fin_de_semana = db.Column(db.Boolean, nullable=True)
+    estacion = db.Column(db.String(50), nullable=True)
+    demanda = db.Column(db.Float, nullable=True)
+    generacion_total = db.Column(db.Float, nullable=True)
+    renovables = db.Column(db.Float, nullable=True)
+    co2 = db.Column(db.Float, nullable=True)
 
     
 # Ruta para obtener datos de la API de REE y almacenarlos en la base de datos
@@ -37,11 +48,11 @@ def fetch_ree_data():
         for item in data['indicator']['values']:
             try:
                 timestamp_dt = datetime.fromisoformat(item['datetime'].replace('Z', '+00:00'))
-                value = float(item['value'])
+                precio = float(item['value'])
 
                 exists = EnergyData.query.filter_by(timestamp=timestamp_dt).first()
                 if not exists:
-                    record = EnergyData(timestamp=timestamp_dt, value=value)
+                    record = EnergyData(timestamp=timestamp_dt, precio=precio)
                     db.session.add(record)
                     new_records += 1
             except (KeyError, ValueError, AttributeError) as e:
@@ -59,7 +70,13 @@ def fetch_ree_data():
 def get_energy_data():
     records = EnergyData.query.order_by(EnergyData.timestamp).all()
     return jsonify([
-        {"timestamp": r.timestamp, "value": r.value} for r in records
+        {
+            "timestamp": r.timestamp, 
+            "precio": r.precio,
+            "demanda": r.demanda,
+            "renovables": r.renovables,
+            "co2": r.co2
+        } for r in records
     ])
 
 

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Datos Históricos y Predicciones - GreenEnergy Insights</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .historico {
+            background-color: #e8f4f8;
+        }
+        .prediccion {
+            background-color: #fff4e6;
+        }
+        .stats {
+            background-color: #e8f8f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .comparison-table {
+            width: 100%;
+            margin: 20px 0;
+            background: white;
+            border-collapse: collapse;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .comparison-table th {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        .comparison-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .metric-label {
+            font-weight: bold;
+            color: #34495e;
+        }
+    </style>
+</head>
+<body>
+    <h1>GreenEnergy Insights - Análisis de Demanda Energética</h1>
+    
+    <div class="stats">
+        <h2>Resumen Estadístico</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Demanda Promedio Histórica</div>
+                <div class="stat-value">85.59 GWh</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Demanda Promedio Predicha</div>
+                <div class="stat-value">92.85 GWh</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Precio Promedio Histórico</div>
+                <div class="stat-value">200.97 €/MWh</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Precio Promedio Predicho</div>
+                <div class="stat-value">201.21 €/MWh</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats">
+        <h2>Estadísticas Comparativas Detalladas</h2>
+        
+        <h3>DEMANDA ENERGÉTICA (GWh)</h3>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Histórico</th>
+                    <th>Predicción</th>
+                    <th>Diferencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="metric-label">Promedio</td>
+                    <td>85.59</td>
+                    <td>92.85</td>
+                    <td>7.27</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">Desviación Estándar</td>
+                    <td>16.27</td>
+                    <td>18.64</td>
+                    <td>2.36</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">Mínimo</td>
+                    <td>55.34</td>
+                    <td>62.85</td>
+                    <td>7.51</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">Máximo</td>
+                    <td>110.38</td>
+                    <td>122.00</td>
+                    <td>11.62</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">25% Percentil</td>
+                    <td>71.84</td>
+                    <td>74.62</td>
+                    <td>2.78</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">50% Percentil (Mediana)</td>
+                    <td>87.41</td>
+                    <td>97.06</td>
+                    <td>9.66</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">75% Percentil</td>
+                    <td>96.23</td>
+                    <td>106.59</td>
+                    <td>10.36</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h3>PRECIO DEL MERCADO (€/MWh)</h3>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Histórico</th>
+                    <th>Predicción</th>
+                    <th>Diferencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="metric-label">Promedio</td>
+                    <td>200.97</td>
+                    <td>201.21</td>
+                    <td>0.24</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">Desviación Estándar</td>
+                    <td>60.95</td>
+                    <td>14.60</td>
+                    <td>-46.35</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">Mínimo</td>
+                    <td>75.88</td>
+                    <td>175.87</td>
+                    <td>99.99</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">Máximo</td>
+                    <td>296.28</td>
+                    <td>218.38</td>
+                    <td>-77.90</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">25% Percentil</td>
+                    <td>154.15</td>
+                    <td>191.22</td>
+                    <td>37.07</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">50% Percentil (Mediana)</td>
+                    <td>207.10</td>
+                    <td>204.91</td>
+                    <td>-2.19</td>
+                </tr>
+                <tr>
+                    <td class="metric-label">75% Percentil</td>
+                    <td>245.93</td>
+                    <td>212.57</td>
+                    <td>-33.36</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <h2>Datos Históricos (Últimas 24 horas) + Predicciones (Próximas 24 horas)</h2>
+    
+    <div style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; border-radius: 4px;">
+        <strong>Predicción Dual:</strong> El sistema entrena dos modelos Prophet independientes para predecir 
+        <strong>demanda energética</strong> y <strong>precio del mercado eléctrico</strong>.
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha y Hora</th>
+                <th>Demanda (GWh)</th>
+                <th>Intervalo Demanda</th>
+                <th>Tipo</th>
+                <th>Precio (€/MWh)</th>
+                <th>Intervalo Precio</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr class="historico">
+                <td>2025-10-19 16:00</td>
+                <td><strong>86.14</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>219.42</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 17:00</td>
+                <td><strong>94.87</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>275.69</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 18:00</td>
+                <td><strong>95.30</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>239.62</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 19:00</td>
+                <td><strong>105.52</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>209.98</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 20:00</td>
+                <td><strong>80.73</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>197.00</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 21:00</td>
+                <td><strong>104.05</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>171.27</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 22:00</td>
+                <td><strong>85.84</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>262.88</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-19 23:00</td>
+                <td><strong>75.92</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>184.67</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 00:00</td>
+                <td><strong>71.67</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>170.62</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 01:00</td>
+                <td><strong>69.70</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>111.06</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 02:00</td>
+                <td><strong>66.87</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>246.37</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 03:00</td>
+                <td><strong>69.23</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>92.30</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 04:00</td>
+                <td><strong>68.91</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>268.01</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 05:00</td>
+                <td><strong>74.72</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>277.96</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 06:00</td>
+                <td><strong>76.62</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>278.91</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 07:00</td>
+                <td><strong>85.10</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>284.01</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 08:00</td>
+                <td><strong>96.23</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>176.90</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 09:00</td>
+                <td><strong>101.45</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>230.60</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 10:00</td>
+                <td><strong>107.52</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>262.84</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 11:00</td>
+                <td><strong>106.71</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>236.75</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 12:00</td>
+                <td><strong>110.38</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>126.73</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 13:00</td>
+                <td><strong>110.00</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>193.59</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 14:00</td>
+                <td><strong>106.71</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>282.48</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="historico">
+                <td>2025-10-20 15:00</td>
+                <td><strong>99.38</strong></td>
+                <td>-</td>
+                <td><strong>Histórico</strong></td>
+                <td>149.66</td>
+                <td>-</td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 03:00</td>
+                <td><strong>67.92</strong></td>
+                <td><small style='color: #7f8c8d;'>[53.62 - 82.67]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>177.94</strong></td>
+                <td><small style='color: #7f8c8d;'>[91.49 - 270.42]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 04:00</td>
+                <td><strong>67.35</strong></td>
+                <td><small style='color: #7f8c8d;'>[52.28 - 82.49]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>175.87</strong></td>
+                <td><small style='color: #7f8c8d;'>[88.74 - 270.08]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 05:00</td>
+                <td><strong>69.43</strong></td>
+                <td><small style='color: #7f8c8d;'>[54.90 - 84.28]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>176.03</strong></td>
+                <td><small style='color: #7f8c8d;'>[82.53 - 266.19]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 06:00</td>
+                <td><strong>76.14</strong></td>
+                <td><small style='color: #7f8c8d;'>[61.97 - 91.51]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>178.01</strong></td>
+                <td><small style='color: #7f8c8d;'>[88.73 - 263.93]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 07:00</td>
+                <td><strong>86.72</strong></td>
+                <td><small style='color: #7f8c8d;'>[71.83 - 101.49]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>182.80</strong></td>
+                <td><small style='color: #7f8c8d;'>[91.82 - 269.38]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 08:00</td>
+                <td><strong>97.83</strong></td>
+                <td><small style='color: #7f8c8d;'>[83.14 - 114.34]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>191.54</strong></td>
+                <td><small style='color: #7f8c8d;'>[105.07 - 276.86]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 09:00</td>
+                <td><strong>105.88</strong></td>
+                <td><small style='color: #7f8c8d;'>[90.68 - 119.96]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>202.84</strong></td>
+                <td><small style='color: #7f8c8d;'>[117.03 - 293.84]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 10:00</td>
+                <td><strong>109.28</strong></td>
+                <td><small style='color: #7f8c8d;'>[94.73 - 124.04]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>211.95</strong></td>
+                <td><small style='color: #7f8c8d;'>[115.39 - 303.89]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 11:00</td>
+                <td><strong>108.73</strong></td>
+                <td><small style='color: #7f8c8d;'>[94.03 - 124.54]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>213.70</strong></td>
+                <td><small style='color: #7f8c8d;'>[116.86 - 306.15]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 12:00</td>
+                <td><strong>105.75</strong></td>
+                <td><small style='color: #7f8c8d;'>[91.48 - 120.65]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>206.97</strong></td>
+                <td><small style='color: #7f8c8d;'>[121.92 - 291.79]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 13:00</td>
+                <td><strong>101.46</strong></td>
+                <td><small style='color: #7f8c8d;'>[87.07 - 116.50]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>196.58</strong></td>
+                <td><small style='color: #7f8c8d;'>[110.60 - 279.12]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 14:00</td>
+                <td><strong>96.85</strong></td>
+                <td><small style='color: #7f8c8d;'>[82.57 - 111.21]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>190.26</strong></td>
+                <td><small style='color: #7f8c8d;'>[110.89 - 276.11]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 15:00</td>
+                <td><strong>93.81</strong></td>
+                <td><small style='color: #7f8c8d;'>[79.84 - 108.64]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>192.79</strong></td>
+                <td><small style='color: #7f8c8d;'>[100.32 - 279.41]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 16:00</td>
+                <td><strong>94.98</strong></td>
+                <td><small style='color: #7f8c8d;'>[79.30 - 109.45]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>202.33</strong></td>
+                <td><small style='color: #7f8c8d;'>[114.09 - 292.03]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 17:00</td>
+                <td><strong>101.82</strong></td>
+                <td><small style='color: #7f8c8d;'>[87.64 - 117.75]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>212.20</strong></td>
+                <td><small style='color: #7f8c8d;'>[123.04 - 300.16]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 18:00</td>
+                <td><strong>112.32</strong></td>
+                <td><small style='color: #7f8c8d;'>[96.66 - 126.22]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>216.55</strong></td>
+                <td><small style='color: #7f8c8d;'>[130.89 - 300.21]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 19:00</td>
+                <td><strong>121.02</strong></td>
+                <td><small style='color: #7f8c8d;'>[105.25 - 135.03]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>214.91</strong></td>
+                <td><small style='color: #7f8c8d;'>[127.36 - 303.22]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 20:00</td>
+                <td><strong>122.00</strong></td>
+                <td><small style='color: #7f8c8d;'>[106.61 - 136.51]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>211.67</strong></td>
+                <td><small style='color: #7f8c8d;'>[120.44 - 296.26]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 21:00</td>
+                <td><strong>113.02</strong></td>
+                <td><small style='color: #7f8c8d;'>[98.14 - 128.23]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>211.51</strong></td>
+                <td><small style='color: #7f8c8d;'>[129.62 - 299.47]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 22:00</td>
+                <td><strong>97.27</strong></td>
+                <td><small style='color: #7f8c8d;'>[82.67 - 110.48]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>215.00</strong></td>
+                <td><small style='color: #7f8c8d;'>[131.74 - 308.43]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-17 23:00</td>
+                <td><strong>81.21</strong></td>
+                <td><small style='color: #7f8c8d;'>[66.80 - 95.52]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>218.38</strong></td>
+                <td><small style='color: #7f8c8d;'>[123.70 - 306.96]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-18 00:00</td>
+                <td><strong>70.05</strong></td>
+                <td><small style='color: #7f8c8d;'>[55.41 - 83.26]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>217.31</strong></td>
+                <td><small style='color: #7f8c8d;'>[127.55 - 304.50]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-18 01:00</td>
+                <td><strong>64.80</strong></td>
+                <td><small style='color: #7f8c8d;'>[50.42 - 79.81]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>210.69</strong></td>
+                <td><small style='color: #7f8c8d;'>[126.61 - 306.72]</small></td>
+            </tr>
+    
+            <tr class="prediccion">
+                <td>2025-10-18 02:00</td>
+                <td><strong>62.85</strong></td>
+                <td><small style='color: #7f8c8d;'>[48.14 - 76.70]</small></td>
+                <td><strong>Predicción</strong></td>
+                <td><strong>201.18</strong></td>
+                <td><small style='color: #7f8c8d;'>[121.39 - 288.92]</small></td>
+            </tr>
+    
+        </tbody>
+    </table>
+    
+    <h2>Gráficos Comparativos</h2>
+    
+    <div style="background-color: #e8f4f8; border-left: 4px solid #3498db; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <strong>Nota:</strong> Los siguientes gráficos muestran análisis detallados de las predicciones, 
+        comparación de modelos y anomalías detectadas. Los gráficos se generan automáticamente al ejecutar 
+        <code>generar_graficos.py</code>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <h3 style="color: #2c3e50; margin-top: 30px;">Predicciones vs Datos Históricos</h3>
+        <p style="color: #7f8c8d; margin-bottom: 15px;">
+            Comparación de las últimas 72 horas de datos históricos con las predicciones para las próximas 48 horas.
+        </p>
+        <img src="graficos/01_predicciones_vs_historico.png" alt="Predicciones vs Histórico" 
+             style="width: 100%; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;" 
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div style="display: none; background-color: #fff4e6; padding: 15px; border-radius: 5px; border-left: 4px solid #F57C00;">
+            Gráfico no disponible. Ejecuta <code>python generar_graficos.py</code> para generarlo.
+        </div>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <h3 style="color: #2c3e50; margin-top: 30px;">Anomalías Detectadas</h3>
+        <p style="color: #7f8c8d; margin-bottom: 15px;">
+            Visualización de todas las anomalías detectadas en la serie temporal, clasificadas por severidad.
+        </p>
+        <img src="graficos/02_anomalias_detectadas.png" alt="Anomalías Detectadas" 
+             style="width: 100%; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div style="display: none; background-color: #fff4e6; padding: 15px; border-radius: 5px; border-left: 4px solid #F57C00;">
+            Gráfico no disponible. Ejecuta <code>python generar_graficos.py</code> para generarlo.
+        </div>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <h3 style="color: #2c3e50; margin-top: 30px;">Comparación de Modelos</h3>
+        <p style="color: #7f8c8d; margin-bottom: 15px;">
+            Evaluación comparativa de cuatro modelos de Machine Learning: Prophet, Random Forest, Gradient Boosting y LSTM.
+        </p>
+        <img src="graficos/03_comparacion_modelos.png" alt="Comparación de Modelos" 
+             style="width: 100%; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div style="display: none; background-color: #fff4e6; padding: 15px; border-radius: 5px; border-left: 4px solid #F57C00;">
+            Gráfico no disponible. Ejecuta <code>python generar_graficos.py</code> para generarlo.
+        </div>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <h3 style="color: #2c3e50; margin-top: 30px;">Distribución de Anomalías</h3>
+        <p style="color: #7f8c8d; margin-bottom: 15px;">
+            Análisis estadístico de las anomalías detectadas por severidad y método de detección.
+        </p>
+        <img src="graficos/04_distribucion_anomalias.png" alt="Distribución de Anomalías" 
+             style="width: 100%; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div style="display: none; background-color: #fff4e6; padding: 15px; border-radius: 5px; border-left: 4px solid #F57C00;">
+            Gráfico no disponible. Ejecuta <code>python generar_graficos.py</code> para generarlo.
+        </div>
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <h3 style="color: #2c3e50; margin-top: 30px;">Serie Temporal Completa</h3>
+        <p style="color: #7f8c8d; margin-bottom: 15px;">
+            Vista panorámica que integra datos históricos, predicciones futuras y todas las anomalías detectadas.
+        </p>
+        <img src="graficos/05_serie_temporal_completa.png" alt="Serie Temporal Completa" 
+             style="width: 100%; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <div style="display: none; background-color: #fff4e6; padding: 15px; border-radius: 5px; border-left: 4px solid #F57C00;">
+            Gráfico no disponible. Ejecuta <code>python generar_graficos.py</code> para generarlo.
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; color: #7f8c8d; font-size: 0.9em;">
+        <p>Generado por Motor de Analítica Avanzada - GreenEnergy Insights</p>
+        <p>Fecha de generación: 2025-10-03 10:59:55</p>
+    </div>
+</body>
+</html>

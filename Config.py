@@ -4,6 +4,9 @@ class Config:
         "mssql+pyodbc://ugrupo2:SYfL1sTc5EQzehpOjopx"
         "@udcserver2025.database.windows.net:1433/grupo_2"
         "?driver=ODBC+Driver+17+for+SQL+Server"
+        "&Encrypt=yes"
+        "&TrustServerCertificate=no"
+        "&Connection+Timeout=30"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

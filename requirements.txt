@@ -1,4 +1,33 @@
+# ============================================================================
+# Dependencias Base
+# ============================================================================
 flask
 flask_sqlalchemy
 requests
 pyodbc
+
+# ============================================================================
+# Motor de Analítica Avanzada
+# ============================================================================
+
+# Análisis de datos
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Machine Learning clásico
+scikit-learn>=1.3.0
+
+# Prophet para series temporales (Facebook)
+prophet>=1.1.5
+
+# Deep Learning (opcional - descomentar si se va a usar LSTM)
+tensorflow>=2.15.0
+keras>=2.15.0
+
+# Visualización (opcional)
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Utilidades
+python-dateutil>=2.8.0
+
