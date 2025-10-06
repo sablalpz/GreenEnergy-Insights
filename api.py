@@ -14,17 +14,12 @@ class EnergyData(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     timestamp = db.Column(db.DateTime, unique=True, nullable=False)
     precio = db.Column(db.Float, nullable=False)
-    potencia = db.Column(db.Float, nullable=True)
     geo_id = db.Column(db.Integer, nullable=True)
-    geo_name = db.Column(db.String(255), nullable=True)
     dia_semana = db.Column(db.Integer, nullable=True)
     hora_dia = db.Column(db.Integer, nullable=True)
     fin_de_semana = db.Column(db.Boolean, nullable=True)
-    estacion = db.Column(db.String(50), nullable=True)
+    estacion = db.Column(db.String(10), nullable=True)
     demanda = db.Column(db.Float, nullable=True)
-    generacion_total = db.Column(db.Float, nullable=True)
-    renovables = db.Column(db.Float, nullable=True)
-    co2 = db.Column(db.Float, nullable=True)
 
     
 # Ruta para obtener datos de la API de REE y almacenarlos en la base de datos
@@ -74,8 +69,11 @@ def get_energy_data():
             "timestamp": r.timestamp, 
             "precio": r.precio,
             "demanda": r.demanda,
-            "renovables": r.renovables,
-            "co2": r.co2
+            "geo_id": r.geo_id,
+            "dia_semana": r.dia_semana,
+            "hora_dia": r.hora_dia,
+            "fin_de_semana": r.fin_de_semana,
+            "estacion": r.estacion
         } for r in records
     ])
 

@@ -37,11 +37,12 @@ class EnergyData(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     timestamp = db.Column(db.DateTime, unique=True, nullable=False)
     precio = db.Column(db.Float, nullable=False)
+    geo_id = db.Column(db.Integer, nullable=True)
+    dia_semana = db.Column(db.Integer, nullable=True)
+    hora_dia = db.Column(db.Integer, nullable=True)
+    fin_de_semana = db.Column(db.Boolean, nullable=True)
+    estacion = db.Column(db.String(10), nullable=True)
     demanda = db.Column(db.Float, nullable=True)
-    potencia = db.Column(db.Float, nullable=True)
-    generacion_total = db.Column(db.Float, nullable=True)
-    renovables = db.Column(db.Float, nullable=True)
-    co2 = db.Column(db.Float, nullable=True)
 
 # ==============================================================================
 # Cargar datos

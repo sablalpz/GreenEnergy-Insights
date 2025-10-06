@@ -9,6 +9,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from Config import Config
 from motor_analitica import MotorAnalitica
+from persistencia import guardar_predicciones, guardar_anomalias, guardar_metricas
 
 print("="*80)
 print("MOTOR DE ANALÍTICA AVANZADA - Demo con Azure SQL")
@@ -30,11 +31,12 @@ class EnergyData(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     timestamp = db.Column(db.DateTime, unique=True, nullable=False)
     precio = db.Column(db.Float, nullable=False)
+    geo_id = db.Column(db.Integer, nullable=True)
+    dia_semana = db.Column(db.Integer, nullable=True)
+    hora_dia = db.Column(db.Integer, nullable=True)
+    fin_de_semana = db.Column(db.Boolean, nullable=True)
+    estacion = db.Column(db.String(10), nullable=True)
     demanda = db.Column(db.Float, nullable=True)
-    potencia = db.Column(db.Float, nullable=True)
-    generacion_total = db.Column(db.Float, nullable=True)
-    renovables = db.Column(db.Float, nullable=True)
-    co2 = db.Column(db.Float, nullable=True)
 
 with app.app_context():
     db.create_all()
@@ -201,6 +203,42 @@ except Exception as e:
     anomalias = None
 
 # ==============================================================================
+# PASO 7: Guardar resultados en tablas separadas
+# ==============================================================================
+print("[7/7] Guardando resultados en tablas de la base de datos...")
+
+try:
+    # Guardar predicciones en la tabla 'predictions'
+    if predicciones is not None and len(predicciones) > 0:
+        num_pred = guardar_predicciones(predicciones, modelo_usado='prophet')
+        print(f"   ✓ Guardadas {num_pred} predicciones en tabla 'predictions'")
+    
+    # Guardar anomalías en la tabla 'anomalies'
+    if anomalias is not None and len(anomalias) > 0:
+        num_anom = guardar_anomalias(anomalias, metodo_deteccion='motor_analitica')
+        print(f"   ✓ Guardadas {num_anom} anomalías en tabla 'anomalies'")
+    
+    # Guardar métricas del modelo en la tabla 'model_metrics'
+    if motor and motor.entrenado:
+        metricas_dict = motor.obtener_metricas()
+        metadata = {
+            'registros_totales': len(df_datos),
+            'test_size': len(motor.df_test),
+            'train_size': len(motor.df_train)
+        }
+        id_metrica = guardar_metricas(
+            nombre_modelo='prophet',
+            metricas_dict=metricas_dict,
+            n_samples=len(motor.df_test),
+            metadata=metadata
+        )
+        print(f"   ✓ Guardadas métricas del modelo (ID: {id_metrica})")
+    
+    print()
+except Exception as e:
+    print(f"   ERROR guardando resultados: {e}\n")
+
+# ==============================================================================
 # RESUMEN FINAL
 # ==============================================================================
 print("="*80)
@@ -213,6 +251,7 @@ print(f"   [{'OK' if total_registros > 0 else 'ERROR'}] Datos históricos ({tota
 print(f"   [{'OK' if motor else 'ERROR'}] Modelo de predicción (Prophet)")
 print(f"   [{'OK' if predicciones is not None else 'SKIP'}] Predicciones generadas")
 print(f"   [{'OK' if anomalias is not None else 'ERROR'}] Detección de anomalías")
+print(f"   [OK] Resultados guardados en tablas separadas")
 
 print("\nEstadísticas:")
 print(f"   - Registros en BD: {total_registros}")
