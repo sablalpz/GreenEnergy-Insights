@@ -1,0 +1,7 @@
+flask 
+flask_sqlalchemy
+pyodbc
+PyJWT==2.8.0
+Werkzeug==2.3.7
+python-dotenv==1.0.0
+dotenv

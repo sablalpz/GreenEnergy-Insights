@@ -1,0 +1,40 @@
+services:
+  
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    ports:
+      - "5002:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./common:/app/common
+    restart: unless-stopped
+    environment:
+      PYTHONPATH: /app
+
+ 
+  etl:
+    build:
+      context: ./etl
+    container_name: etl
+    env_file:
+      - .env
+    volumes:
+      - ./common:/app/common
+    restart: unless-stopped
+    environment:
+      PYTHONPATH: /app
+
+  motor_analitica:
+    build:
+      context: ./motor_analitica
+    container_name: motor_analitica
+    env_file:
+      - .env
+    volumes:
+      - ./common:/app/common
+    restart: unless-stopped
+    environment:
+      PYTHONPATH: /app
