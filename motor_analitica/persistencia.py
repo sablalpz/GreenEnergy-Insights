@@ -3,7 +3,7 @@
 MÓDULO DE PERSISTENCIA PARA PREDICCIONES, ANOMALÍAS Y MÉTRICAS
 =================================================================================
 
-Este módulo proporciona funciones para guardar predicciones, anomalías y 
+Este módulo proporciona funciones para guardar predicciones, anomalías y
 métricas del modelo en tablas separadas de Azure SQL Database.
 
 Tablas:
@@ -12,62 +12,20 @@ Tablas:
 - model_metrics: Métricas de rendimiento del modelo
 """
 
+import sys
+import os
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from Config import Config
 from datetime import datetime, timedelta
 import json
 
+# Agregar el directorio padre al path para importar Config y models
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Config import Config
+from models import db, Prediction, Anomaly, ModelMetric
+
 app = Flask(__name__)
 app.config.from_object(Config)
-db = SQLAlchemy(app)
-
-
-# =============================================================================
-# MODELOS DE LAS TABLAS
-# =============================================================================
-
-class Prediction(db.Model):
-    """Tabla para almacenar predicciones generadas"""
-    __tablename__ = "predictions"
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    prediccion = db.Column(db.Float, nullable=False)
-    limite_inferior = db.Column(db.Float, nullable=True)
-    limite_superior = db.Column(db.Float, nullable=True)
-    modelo_usado = db.Column(db.String(50), nullable=False)
-    fecha_generacion = db.Column(db.DateTime, nullable=True, default=datetime.now)
-
-
-class Anomaly(db.Model):
-    """Tabla para almacenar anomalías detectadas"""
-    __tablename__ = "anomalies"
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    value = db.Column(db.Float, nullable=False)
-    tipo_anomalia = db.Column(db.String(50), nullable=False)
-    severidad = db.Column(db.String(20), nullable=False)
-    metodo_deteccion = db.Column(db.String(50), nullable=False)
-    descripcion = db.Column(db.String(500), nullable=True)
-    fecha_deteccion = db.Column(db.DateTime, nullable=True, default=datetime.now)
-
-
-class ModelMetric(db.Model):
-    """Tabla para almacenar métricas de rendimiento del modelo"""
-    __tablename__ = "model_metrics"
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nombre_modelo = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
-    mape = db.Column(db.Float, nullable=True)
-    smape = db.Column(db.Float, nullable=True)
-    rmse = db.Column(db.Float, nullable=True)
-    mae = db.Column(db.Float, nullable=True)
-    r2 = db.Column(db.Float, nullable=True)
-    n_samples = db.Column(db.Integer, nullable=True)
-    metadata_json = db.Column(db.String(1000), nullable=True)
+db.init_app(app)
 
 
 # =============================================================================
@@ -77,65 +35,63 @@ class ModelMetric(db.Model):
 def guardar_predicciones(predicciones_df, modelo_usado="prophet"):
     """
     Guarda predicciones en la tabla predictions.
-    
+
     Args:
-        predicciones_df: DataFrame con columnas 'timestamp', 'prediccion', 
+        predicciones_df: DataFrame con columnas 'timestamp', 'prediccion',
                          'limite_inferior' (opcional), 'limite_superior' (opcional)
         modelo_usado: Nombre del modelo usado (por defecto: 'prophet')
-    
+
     Returns:
         int: Número de predicciones guardadas
     """
     with app.app_context():
         nuevas = 0
-        fecha_generacion = datetime.now()
-        
+
         for _, row in predicciones_df.iterrows():
             # Verificar si ya existe
             existe = Prediction.query.filter_by(
                 timestamp=row['timestamp'],
                 modelo_usado=modelo_usado
             ).first()
-            
+
             if not existe:
                 pred = Prediction(
                     timestamp=row['timestamp'],
                     prediccion=row['prediccion'],
                     limite_inferior=row.get('limite_inferior'),
                     limite_superior=row.get('limite_superior'),
-                    modelo_usado=modelo_usado,
-                    fecha_generacion=fecha_generacion
+                    modelo_usado=modelo_usado
                 )
                 db.session.add(pred)
                 nuevas += 1
-        
+
         db.session.commit()
+        print(f"   ✓ Guardadas {nuevas} predicciones nuevas")
         return nuevas
 
 
 def guardar_anomalias(anomalias_df, metodo_deteccion="motor_analitica"):
     """
     Guarda anomalías en la tabla anomalies.
-    
+
     Args:
-        anomalias_df: DataFrame con columnas 'timestamp', 'value', 'tipo_anomalia', 
-                      'severidad', 'descripcion' (opcional)
+        anomalias_df: DataFrame con columnas 'timestamp', 'value', 'tipo_anomalia',
+                      'severidad', 'anomaly_score' (opcional)
         metodo_deteccion: Método usado para detectar (por defecto: 'motor_analitica')
-    
+
     Returns:
         int: Número de anomalías guardadas
     """
     with app.app_context():
         nuevas = 0
-        fecha_deteccion = datetime.now()
-        
+
         for _, row in anomalias_df.iterrows():
             # Verificar si ya existe
             existe = Anomaly.query.filter_by(
                 timestamp=row['timestamp'],
                 metodo_deteccion=metodo_deteccion
             ).first()
-            
+
             if not existe:
                 anomalia = Anomaly(
                     timestamp=row['timestamp'],
@@ -143,45 +99,45 @@ def guardar_anomalias(anomalias_df, metodo_deteccion="motor_analitica"):
                     tipo_anomalia=row['tipo_anomalia'],
                     severidad=row['severidad'],
                     metodo_deteccion=metodo_deteccion,
-                    descripcion=row.get('descripcion', ''),
-                    fecha_deteccion=fecha_deteccion
+                    score_anomalia=row.get('anomaly_score')
                 )
                 db.session.add(anomalia)
                 nuevas += 1
-        
+
         db.session.commit()
+        print(f"   ✓ Guardadas {nuevas} anomalías nuevas")
         return nuevas
 
 
 def guardar_metricas(nombre_modelo, metricas_dict, n_samples=None, metadata=None):
     """
     Guarda métricas del modelo en la tabla model_metrics.
-    
+
     Args:
         nombre_modelo: Nombre del modelo (ej: 'prophet', 'random_forest')
-        metricas_dict: Dict con métricas {'mape': 0.05, 'rmse': 10.2, ...}
+        metricas_dict: Dict con métricas {'MAPE': 0.05, 'RMSE': 10.2, ...}
         n_samples: Número de muestras usadas para calcular métricas
         metadata: Dict con información adicional (se guarda como JSON)
-    
+
     Returns:
         int: ID del registro guardado
     """
     with app.app_context():
         metrica = ModelMetric(
             nombre_modelo=nombre_modelo,
-            timestamp=datetime.now(),
             mape=metricas_dict.get('MAPE'),
             smape=metricas_dict.get('SMAPE'),
             rmse=metricas_dict.get('RMSE'),
             mae=metricas_dict.get('MAE'),
             r2=metricas_dict.get('R2'),
-            n_samples=n_samples,
-            metadata_json=json.dumps(metadata) if metadata else None
+            n_samples=n_samples if n_samples else 0,
+            model_metadata=json.dumps(metadata) if metadata else None
         )
-        
+
         db.session.add(metrica)
         db.session.commit()
-        
+
+        print(f"   ✓ Guardadas métricas del modelo '{nombre_modelo}' (ID: {metrica.id})")
         return metrica.id
 
 

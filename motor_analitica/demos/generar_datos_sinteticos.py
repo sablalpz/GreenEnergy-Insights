@@ -2,12 +2,17 @@
 Generador de datos sintéticos de demanda para Azure SQL
 Solo genera datos SI NO hay suficientes datos reales de demanda
 """
+import sys
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from Config import Config
 from datetime import datetime, timedelta
 import numpy as np
 import random
+
+# Agregar el directorio padre al path para importar Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Config import Config
 
 print("="*80)
 print("GENERADOR DE DATOS SINTÉTICOS DE DEMANDA")

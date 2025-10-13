@@ -3,11 +3,17 @@ Demo completo del Motor de Analítica Avanzada
 Usando datos de Azure SQL Database
 """
 import sys
+import os
 from datetime import datetime, timedelta
 import pandas as pd
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+
+# Agregar el directorio padre al path para importar Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Config import Config
+
+# Importar módulos locales
 from motor_analitica import MotorAnalitica
 from persistencia import guardar_predicciones, guardar_anomalias, guardar_metricas
 

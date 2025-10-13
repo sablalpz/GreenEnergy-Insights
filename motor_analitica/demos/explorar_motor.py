@@ -3,11 +3,17 @@ Exploración Avanzada del Motor de Analítica
 Permite probar diferentes modelos, métricas y detectores de anomalías
 """
 import sys
+import os
 from datetime import datetime, timedelta
 import pandas as pd
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+
+# Agregar el directorio padre al path para importar Config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Config import Config
+
+# Importar módulo local
 from motor_analitica import MotorAnalitica
 
 print("="*80)
