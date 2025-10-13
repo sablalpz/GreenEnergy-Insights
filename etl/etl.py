@@ -6,13 +6,6 @@ import os
 import sys
 from common import db, create_app, EnergyData, Config
 
-#app = Flask(__name__)
-
-# Configuración conexión desde variable de entorno
-#app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("SQLALCHEMY_DATABASE_URI")
-#app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-#db = SQLAlchemy(app)
-
 
 app = create_app()  # Usa la configuración compartida
 

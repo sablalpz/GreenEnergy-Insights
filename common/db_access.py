@@ -1,77 +1,49 @@
-"""
-=================================================================================
-MÓDULO DE PERSISTENCIA PARA PREDICCIONES, ANOMALÍAS Y MÉTRICAS
-=================================================================================
-
-Este módulo proporciona funciones para guardar predicciones, anomalías y 
-métricas del modelo en tablas separadas de Azure SQL Database.
-
-Tablas:
-- predictions: Predicciones generadas por el modelo
-- anomalies: Anomalías detectadas en los datos
-- model_metrics: Métricas de rendimiento del modelo
-"""
-
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from common import create_app, db, Config
+# db_manager.py
+from common import db, EnergyData, Prediction, Anomaly, ModelMetric   # importa db y modelo desde tu ETL (api.py)
 from datetime import datetime, timedelta
 import json
 
-app = create_app()
-'''
-# =============================================================================
-# MODELOS DE LAS TABLAS
-# =============================================================================
 
-class Prediction(db.Model):
-    """Tabla para almacenar predicciones generadas"""
-    __tablename__ = "predictions"
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    prediccion = db.Column(db.Float, nullable=False)
-    limite_inferior = db.Column(db.Float, nullable=True)
-    limite_superior = db.Column(db.Float, nullable=True)
-    modelo_usado = db.Column(db.String(50), nullable=False)
-    fecha_generacion = db.Column(db.DateTime, nullable=True, default=datetime.now)
+def _row_to_dict(r: EnergyData):
+    """Convierte un registro EnergyData en un dict serializable (incluye id)."""
+    return {
+        "id": r.id,
+        "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+        "precio": r.precio,
+        "potencia": r.potencia,
+        "geo_id": r.geo_id,
+        "dia_semana": r.dia_semana,
+        "hora_dia": r.hora_dia,
+        "fin_de_semana": r.fin_de_semana,
+        "estacion": r.estacion,
+        "demanda": r.demanda,
+    }
 
 
-class Anomaly(db.Model):
-    """Tabla para almacenar anomalías detectadas"""
-    __tablename__ = "anomalies"
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    value = db.Column(db.Float, nullable=False)
-    tipo_anomalia = db.Column(db.String(50), nullable=False)
-    severidad = db.Column(db.String(20), nullable=False)
-    metodo_deteccion = db.Column(db.String(50), nullable=False)
-    descripcion = db.Column(db.String(500), nullable=True)
-    fecha_deteccion = db.Column(db.DateTime, nullable=True, default=datetime.now)
+#################################################################################
+            #Adición de nuevos datos a las tablas de la base de datos# 
+#################################################################################
+def guardar_energydata(timestamp, precio, demanda=None,
+                       dia_semana=None, hora_dia=None, fin_de_semana=None,
+                       estacion=None, geo_id=None, potencia=None):
+    """Inserta un nuevo registro en energy_data y devuelve su id."""
+    record = EnergyData(
+        timestamp=timestamp,
+        precio=precio,
+        demanda=demanda,
+        dia_semana=dia_semana,
+        hora_dia=hora_dia,
+        fin_de_semana=fin_de_semana,
+        estacion=estacion,
+        geo_id=geo_id,
+        potencia=potencia
+    )
+    db.session.add(record)
+    db.session.commit()
+    return record.id
 
 
-class ModelMetric(db.Model):
-    """Tabla para almacenar métricas de rendimiento del modelo"""
-    __tablename__ = "model_metrics"
-    
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nombre_modelo = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
-    mape = db.Column(db.Float, nullable=True)
-    smape = db.Column(db.Float, nullable=True)
-    rmse = db.Column(db.Float, nullable=True)
-    mae = db.Column(db.Float, nullable=True)
-    r2 = db.Column(db.Float, nullable=True)
-    n_samples = db.Column(db.Integer, nullable=True)
-    metadata_json = db.Column(db.String(1000), nullable=True)
-
-'''
-# =============================================================================
-# FUNCIONES DE GUARDADO => Esto tiene que ir en el db_access del back
-# =============================================================================
-
-def guardar_predicciones(predicciones_df, modelo_usado="prophet"):
+def guardar_predicciones(predicciones_df, modelo_usado="prophet", app=None):
     """
     Guarda predicciones en la tabla predictions.
     
@@ -108,9 +80,10 @@ def guardar_predicciones(predicciones_df, modelo_usado="prophet"):
         
         db.session.commit()
         return nuevas
+    
 
 
-def guardar_anomalias(anomalias_df, metodo_deteccion="motor_analitica"):
+def guardar_anomalias(anomalias_df, metodo_deteccion="motor_analitica",app=None):
     """
     Guarda anomalías en la tabla anomalies.
     
@@ -149,8 +122,7 @@ def guardar_anomalias(anomalias_df, metodo_deteccion="motor_analitica"):
         db.session.commit()
         return nuevas
 
-
-def guardar_metricas(nombre_modelo, metricas_dict, n_samples=None, metadata=None):
+def guardar_metricas(nombre_modelo, metricas_dict, n_samples=None, metadata=None, app=None):
     """
     Guarda métricas del modelo en la tabla model_metrics.
     
@@ -181,12 +153,11 @@ def guardar_metricas(nombre_modelo, metricas_dict, n_samples=None, metadata=None
         
         return metrica.id
 
+#################################################################################
+                    #Lectura de datos de las tablas# 
+#################################################################################
 
-# =============================================================================
-# FUNCIONES DE LECTURA
-# =============================================================================
-
-def obtener_predicciones(modelo=None, desde=None, hasta=None, limit=100):
+def obtener_predicciones(modelo=None, desde=None, hasta=None, limit=100, app=None):
     """
     Obtiene predicciones de la tabla predictions.
     
@@ -226,7 +197,7 @@ def obtener_predicciones(modelo=None, desde=None, hasta=None, limit=100):
         ]
 
 
-def obtener_anomalias(desde=None, hasta=None, severidad=None, limit=100):
+def obtener_anomalias(desde=None, hasta=None, severidad=None, limit=100, app=None):
     """
     Obtiene anomalías de la tabla anomalies.
     
@@ -267,7 +238,7 @@ def obtener_anomalias(desde=None, hasta=None, severidad=None, limit=100):
         ]
 
 
-def obtener_ultimas_metricas(modelo=None, limit=10):
+def obtener_ultimas_metricas(modelo=None, limit=10, app=None):
     """
     Obtiene las últimas métricas guardadas.
     
@@ -304,11 +275,12 @@ def obtener_ultimas_metricas(modelo=None, limit=10):
         ]
 
 
-# =============================================================================
-# FUNCIONES DE UTILIDAD
-# =============================================================================
+#################################################################################
+                    #Lectura de datos de las tablas# 
+#################################################################################
 
-def limpiar_predicciones_antiguas(dias=30):
+
+def limpiar_predicciones_antiguas(dias=30, app=None):
     """
     Elimina predicciones más antiguas de X días.
     
@@ -329,7 +301,7 @@ def limpiar_predicciones_antiguas(dias=30):
         return eliminadas
 
 
-def obtener_estadisticas():
+def obtener_estadisticas(app = None):
     """
     Obtiene estadísticas generales de las tablas.
     
@@ -350,19 +322,3 @@ def obtener_estadisticas():
                 Prediction.fecha_generacion.desc()
             ).first().fecha_generacion if total_predicciones > 0 else None
         }
-
-
-if __name__ == "__main__":
-    # Test de conexión
-    print("\n" + "="*80)
-    print("TEST DE MÓDULO DE PERSISTENCIA")
-    print("="*80 + "\n")
-    
-    stats = obtener_estadisticas()
-    print("Estadísticas de las tablas:")
-    print(f"  - Predicciones: {stats['total_predicciones']}")
-    print(f"  - Anomalías: {stats['total_anomalias']}")
-    print(f"  - Métricas: {stats['total_metricas']}")
-    print(f"  - Modelos únicos: {stats['modelos_unicos']}")
-    print(f"  - Última predicción: {stats['ultima_prediccion']}")
-    print("\n✓ Módulo funcionando correctamente\n")

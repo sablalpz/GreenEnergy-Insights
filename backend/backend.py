@@ -4,16 +4,12 @@
 
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from auth import token_required, generate_token, User
+from auth import token_required, generate_token
 import db_access
 import os
+from common import db, create_app, User, Config
 
-app = Flask(__name__)
-
-# Configuración de la base de datos
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///data.db")
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
+app = create_app()
 
 
 # ------------------------------
@@ -60,6 +56,9 @@ def register():
     db.session.add(user)
     db.session.commit()
     return jsonify({"message": "Usuario creado correctamente"}), 201
+
+
+""" LLamadas a las herramientas del modelo, en este caso al script de visualización """
 
 
 if __name__ == "__main__":

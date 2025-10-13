@@ -22,7 +22,7 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > mic
 
 # Copiar dependencias del ETL
 COPY requirements.motor.txt .
-RUN pip install --no-cache-dir -r requirements.etl.txt
+RUN pip install --no-cache-dir -r requirements.motor.txt
 
 # Copiar el código fuente del ETL
 COPY . /app

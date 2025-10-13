@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from Config import Config
+from common import EnergyData, create_app,Config
 from motor_analitica import MotorAnalitica
 
 # Configurar estilo de gráficos
@@ -28,21 +28,7 @@ print()
 # ==============================================================================
 # Configurar conexión
 # ==============================================================================
-app = Flask(__name__)
-app.config.from_object(Config)
-db = SQLAlchemy(app)
-
-class EnergyData(db.Model):
-    __tablename__ = "energy_data"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    timestamp = db.Column(db.DateTime, unique=True, nullable=False)
-    precio = db.Column(db.Float, nullable=False)
-    geo_id = db.Column(db.Integer, nullable=True)
-    dia_semana = db.Column(db.Integer, nullable=True)
-    hora_dia = db.Column(db.Integer, nullable=True)
-    fin_de_semana = db.Column(db.Boolean, nullable=True)
-    estacion = db.Column(db.String(10), nullable=True)
-    demanda = db.Column(db.Float, nullable=True)
+app = create_app()
 
 # ==============================================================================
 # Cargar datos

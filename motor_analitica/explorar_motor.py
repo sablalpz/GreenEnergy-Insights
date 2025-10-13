@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from Config import Config
+from common import EnergyData,create_app ,Config
 from motor_analitica import MotorAnalitica
 
 print("="*80)
@@ -18,20 +18,8 @@ print()
 # ==============================================================================
 # Configurar conexión
 # ==============================================================================
-app = Flask(__name__)
-app.config.from_object(Config)
-db = SQLAlchemy(app)
 
-class EnergyData(db.Model):
-    __tablename__ = "energy_data"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    timestamp = db.Column(db.DateTime, unique=True, nullable=False)
-    precio = db.Column(db.Float, nullable=False)
-    demanda = db.Column(db.Float, nullable=True)
-    potencia = db.Column(db.Float, nullable=True)
-    generacion_total = db.Column(db.Float, nullable=True)
-    renovables = db.Column(db.Float, nullable=True)
-    co2 = db.Column(db.Float, nullable=True)
+app = create_app()
 
 # ==============================================================================
 # Cargar datos

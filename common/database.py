@@ -1,5 +1,6 @@
 # /common/models.py
 import os
+from datetime import datetime, timedelta
 from . import db 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -60,12 +61,42 @@ class EnergyData(db.Model):
         db.UniqueConstraint("timestamp", "geo_id", name="unique_timestamp_geo"),
     )
 
+class Prediction(db.Model):
+    """Tabla para almacenar predicciones generadas"""
+    __tablename__ = "predictions"
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    timestamp = db.Column(db.DateTime, nullable=False)
+    prediccion = db.Column(db.Float, nullable=False)
+    limite_inferior = db.Column(db.Float, nullable=True)
+    limite_superior = db.Column(db.Float, nullable=True)
+    modelo_usado = db.Column(db.String(50), nullable=False)
+    fecha_generacion = db.Column(db.DateTime, nullable=True, default=datetime.now)
 
-# ==============================
-# Crear tablas (opcional al ejecutar)
-# ==============================
-if __name__ == "__main__":
-    app = create_app()
-    with app.app_context():
-        db.create_all()
-        print("Base de datos creada con las tablas 'users' y 'energy_data'")
+class Anomaly(db.Model):
+    """Tabla para almacenar anomalías detectadas"""
+    __tablename__ = "anomalies"
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    timestamp = db.Column(db.DateTime, nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    tipo_anomalia = db.Column(db.String(50), nullable=False)
+    severidad = db.Column(db.String(20), nullable=False)
+    metodo_deteccion = db.Column(db.String(50), nullable=False)
+    descripcion = db.Column(db.String(500), nullable=True)
+    fecha_deteccion = db.Column(db.DateTime, nullable=True, default=datetime.now)
+
+class ModelMetric(db.Model):
+    """Tabla para almacenar métricas de rendimiento del modelo"""
+    __tablename__ = "model_metrics"
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre_modelo = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    mape = db.Column(db.Float, nullable=True)
+    smape = db.Column(db.Float, nullable=True)
+    rmse = db.Column(db.Float, nullable=True)
+    mae = db.Column(db.Float, nullable=True)
+    r2 = db.Column(db.Float, nullable=True)
+    n_samples = db.Column(db.Integer, nullable=True)
+    metadata_json = db.Column(db.String(1000), nullable=True)
