@@ -1,10 +1,8 @@
-from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import jsonify
 import requests
 from datetime import datetime
-import os 
-import sys
 from common import db, create_app, EnergyData, Config
+from common.db_access import guardar_registro
 
 
 app = create_app()  # Usa la configuración compartida
@@ -65,7 +63,9 @@ def fetch_ree_data():
             # Evitar duplicados (único por timestamp)
             exists = EnergyData.query.filter_by(timestamp=timestamp).first()
             if not exists:
-                record = EnergyData(
+                guardar_registro(
+                    EnergyData,
+                    db.session,
                     timestamp=timestamp,
                     precio=precio,
                     demanda=demanda,
@@ -74,7 +74,6 @@ def fetch_ree_data():
                     fin_de_semana=fin_de_semana,
                     estacion=season
                 )
-                db.session.add(record)
                 new_records += 1
 
         except Exception as e:

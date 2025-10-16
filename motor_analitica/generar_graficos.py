@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from common import EnergyData, create_app,Config
+from common import EnergyData, create_app, Config
 from motor_analitica import MotorAnalitica
 
 # Configurar estilo de gráficos

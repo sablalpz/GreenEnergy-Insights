@@ -5,9 +5,8 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from auth import token_required, generate_token
-import db_access
 import os
-from common import db, create_app, User, Config
+from common import db, create_app, User, Config, db_access
 
 app = create_app()
 

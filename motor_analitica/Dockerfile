@@ -31,4 +31,4 @@ COPY . /app
 ENV PYTHONPATH=/app
 
 
-CMD ["python", "motor.py"]
+CMD ["python", "motor_analitica.py"]

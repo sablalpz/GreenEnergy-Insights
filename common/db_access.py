@@ -1,278 +1,141 @@
 # db_manager.py
-from common import db, EnergyData, Prediction, Anomaly, ModelMetric   # importa db y modelo desde tu ETL (api.py)
+from common import db  # importa db y modelo desde tu ETL (api.py)
 from datetime import datetime, timedelta
 import json
 
 
-def _row_to_dict(r: EnergyData):
-    """Convierte un registro EnergyData en un dict serializable (incluye id)."""
-    return {
-        "id": r.id,
-        "timestamp": r.timestamp.isoformat() if r.timestamp else None,
-        "precio": r.precio,
-        "potencia": r.potencia,
-        "geo_id": r.geo_id,
-        "dia_semana": r.dia_semana,
-        "hora_dia": r.hora_dia,
-        "fin_de_semana": r.fin_de_semana,
-        "estacion": r.estacion,
-        "demanda": r.demanda,
-    }
+def row_to_dict(row, columns=None):
+    """
+    Convierte un registro en un dict serializable.
+    Args:
+        row: instancia de modelo SQLAlchemy
+        columns: lista de columnas a incluir (opcional)
+    Returns:
+        dict
+    """
+    if columns is None:
+        columns = row.__table__.columns.keys()
+    result = {}
+    for col in columns:
+        val = getattr(row, col)
+        if hasattr(val, 'isoformat'):
+            val = val.isoformat()
+        result[col] = val
+    return result
 
 
 #################################################################################
             #Adición de nuevos datos a las tablas de la base de datos# 
 #################################################################################
-def guardar_energydata(timestamp, precio, demanda=None,
-                       dia_semana=None, hora_dia=None, fin_de_semana=None,
-                       estacion=None, geo_id=None, potencia=None):
-    """Inserta un nuevo registro en energy_data y devuelve su id."""
-    record = EnergyData(
-        timestamp=timestamp,
-        precio=precio,
-        demanda=demanda,
-        dia_semana=dia_semana,
-        hora_dia=hora_dia,
-        fin_de_semana=fin_de_semana,
-        estacion=estacion,
-        geo_id=geo_id,
-        potencia=potencia
-    )
-    db.session.add(record)
-    db.session.commit()
+def guardar_registro(model_class, session, **kwargs):
+    """
+    Inserta un nuevo registro en la tabla indicada por model_class.
+    Args:
+        model_class: clase del modelo SQLAlchemy
+        session: sesión de SQLAlchemy
+        kwargs: campos del modelo
+    Returns:
+        id del registro creado
+    """
+    record = model_class(**kwargs)
+    session.add(record)
+    session.commit()
     return record.id
 
 
-def guardar_predicciones(predicciones_df, modelo_usado="prophet", app=None):
+def guardar_registros_desde_df(df, model_class, session, unique_fields=None, extra_fields=None):
     """
-    Guarda predicciones en la tabla predictions.
-    
+    Guarda registros desde un DataFrame en la tabla indicada por model_class.
     Args:
-        predicciones_df: DataFrame con columnas 'timestamp', 'prediccion', 
-                         'limite_inferior' (opcional), 'limite_superior' (opcional)
-        modelo_usado: Nombre del modelo usado (por defecto: 'prophet')
-    
+        df: DataFrame con los datos
+        model_class: clase del modelo SQLAlchemy
+        session: sesión de SQLAlchemy
+        unique_fields: lista de campos para verificar duplicados
+        extra_fields: dict de campos extra a añadir a cada registro
     Returns:
-        int: Número de predicciones guardadas
+        int: número de registros guardados
     """
-    with app.app_context():
-        nuevas = 0
-        fecha_generacion = datetime.now()
-        
-        for _, row in predicciones_df.iterrows():
-            # Verificar si ya existe
-            existe = Prediction.query.filter_by(
-                timestamp=row['timestamp'],
-                modelo_usado=modelo_usado
-            ).first()
-            
-            if not existe:
-                pred = Prediction(
-                    timestamp=row['timestamp'],
-                    prediccion=row['prediccion'],
-                    limite_inferior=row.get('limite_inferior'),
-                    limite_superior=row.get('limite_superior'),
-                    modelo_usado=modelo_usado,
-                    fecha_generacion=fecha_generacion
-                )
-                db.session.add(pred)
-                nuevas += 1
-        
-        db.session.commit()
-        return nuevas
+    nuevas = 0
+    extra_fields = extra_fields or {}
+    for _, row in df.iterrows():
+        filtro = {f: row[f] for f in unique_fields} if unique_fields else {}
+        existe = session.query(model_class).filter_by(**filtro).first() if filtro else None
+        if not existe:
+            datos = {**row.to_dict(), **extra_fields}
+            registro = model_class(**datos)
+            session.add(registro)
+            nuevas += 1
+    session.commit()
+    return nuevas
     
 
 
-def guardar_anomalias(anomalias_df, metodo_deteccion="motor_analitica",app=None):
-    """
-    Guarda anomalías en la tabla anomalies.
-    
-    Args:
-        anomalias_df: DataFrame con columnas 'timestamp', 'value', 'tipo_anomalia', 
-                      'severidad', 'descripcion' (opcional)
-        metodo_deteccion: Método usado para detectar (por defecto: 'motor_analitica')
-    
-    Returns:
-        int: Número de anomalías guardadas
-    """
-    with app.app_context():
-        nuevas = 0
-        fecha_deteccion = datetime.now()
-        
-        for _, row in anomalias_df.iterrows():
-            # Verificar si ya existe
-            existe = Anomaly.query.filter_by(
-                timestamp=row['timestamp'],
-                metodo_deteccion=metodo_deteccion
-            ).first()
-            
-            if not existe:
-                anomalia = Anomaly(
-                    timestamp=row['timestamp'],
-                    value=row['value'],
-                    tipo_anomalia=row['tipo_anomalia'],
-                    severidad=row['severidad'],
-                    metodo_deteccion=metodo_deteccion,
-                    descripcion=row.get('descripcion', ''),
-                    fecha_deteccion=fecha_deteccion
-                )
-                db.session.add(anomalia)
-                nuevas += 1
-        
-        db.session.commit()
-        return nuevas
+    # Usar guardar_registros_desde_df para anomalias también
 
-def guardar_metricas(nombre_modelo, metricas_dict, n_samples=None, metadata=None, app=None):
+def guardar_metricas(model_class, session, nombre_modelo, metricas_dict, n_samples=None, metadata=None):
     """
-    Guarda métricas del modelo en la tabla model_metrics.
-    
+    Guarda métricas del modelo en la tabla indicada por model_class.
     Args:
-        nombre_modelo: Nombre del modelo (ej: 'prophet', 'random_forest')
-        metricas_dict: Dict con métricas {'mape': 0.05, 'rmse': 10.2, ...}
-        n_samples: Número de muestras usadas para calcular métricas
-        metadata: Dict con información adicional (se guarda como JSON)
-    
+        model_class: clase del modelo SQLAlchemy
+        session: sesión de SQLAlchemy
+        nombre_modelo: nombre del modelo
+        metricas_dict: dict de métricas
+        n_samples: número de muestras
+        metadata: dict de información extra
     Returns:
-        int: ID del registro guardado
+        id del registro guardado
     """
-    with app.app_context():
-        metrica = ModelMetric(
-            nombre_modelo=nombre_modelo,
-            timestamp=datetime.now(),
-            mape=metricas_dict.get('MAPE'),
-            smape=metricas_dict.get('SMAPE'),
-            rmse=metricas_dict.get('RMSE'),
-            mae=metricas_dict.get('MAE'),
-            r2=metricas_dict.get('R2'),
-            n_samples=n_samples,
-            metadata_json=json.dumps(metadata) if metadata else None
-        )
-        
-        db.session.add(metrica)
-        db.session.commit()
-        
-        return metrica.id
+    metrica = model_class(
+        nombre_modelo=nombre_modelo,
+        timestamp=datetime.now(),
+        mape=metricas_dict.get('MAPE'),
+        smape=metricas_dict.get('SMAPE'),
+        rmse=metricas_dict.get('RMSE'),
+        mae=metricas_dict.get('MAE'),
+        r2=metricas_dict.get('R2'),
+        n_samples=n_samples,
+        metadata_json=json.dumps(metadata) if metadata else None
+    )
+    session.add(metrica)
+    session.commit()
+    return metrica.id
 
 #################################################################################
                     #Lectura de datos de las tablas# 
 #################################################################################
 
-def obtener_predicciones(modelo=None, desde=None, hasta=None, limit=100, app=None):
+def obtener_registros(model_class, session, filters=None, order_by=None, limit=100, columns=None):
     """
-    Obtiene predicciones de la tabla predictions.
-    
+    Obtiene registros de la tabla indicada por model_class.
     Args:
-        modelo: Filtrar por modelo (opcional)
-        desde: Fecha inicio (opcional)
-        hasta: Fecha fin (opcional)
-        limit: Límite de registros (por defecto: 100)
-    
+        model_class: clase del modelo SQLAlchemy
+        session: sesión de SQLAlchemy
+        filters: dict de filtros
+        order_by: campo para ordenar (descendente si termina en .desc())
+        limit: límite de registros
+        columns: columnas a devolver
     Returns:
-        list: Lista de diccionarios con las predicciones
+        list de dicts
     """
-    with app.app_context():
-        query = Prediction.query
-        
-        if modelo:
-            query = query.filter(Prediction.modelo_usado == modelo)
-        if desde:
-            query = query.filter(Prediction.timestamp >= desde)
-        if hasta:
-            query = query.filter(Prediction.timestamp <= hasta)
-        
-        query = query.order_by(Prediction.timestamp.desc()).limit(limit)
-        predicciones = query.all()
-        
-        return [
-            {
-                'id': p.id,
-                'timestamp': p.timestamp,
-                'prediccion': p.prediccion,
-                'limite_inferior': p.limite_inferior,
-                'limite_superior': p.limite_superior,
-                'modelo_usado': p.modelo_usado,
-                'fecha_generacion': p.fecha_generacion
-            }
-            for p in predicciones
-        ]
+    query = session.query(model_class)
+    if filters:
+        for k, v in filters.items():
+            query = query.filter(getattr(model_class, k) == v)
+    if order_by:
+        if order_by.endswith('.desc()'):
+            col = order_by.replace('.desc()', '')
+            query = query.order_by(getattr(model_class, col).desc())
+        else:
+            query = query.order_by(getattr(model_class, order_by))
+    query = query.limit(limit)
+    registros = query.all()
+    return [row_to_dict(r, columns) for r in registros]
 
 
-def obtener_anomalias(desde=None, hasta=None, severidad=None, limit=100, app=None):
-    """
-    Obtiene anomalías de la tabla anomalies.
-    
-    Args:
-        desde: Fecha inicio (opcional)
-        hasta: Fecha fin (opcional)
-        severidad: Filtrar por severidad (opcional)
-        limit: Límite de registros (por defecto: 100)
-    
-    Returns:
-        list: Lista de diccionarios con las anomalías
-    """
-    with app.app_context():
-        query = Anomaly.query
-        
-        if desde:
-            query = query.filter(Anomaly.timestamp >= desde)
-        if hasta:
-            query = query.filter(Anomaly.timestamp <= hasta)
-        if severidad:
-            query = query.filter(Anomaly.severidad == severidad)
-        
-        query = query.order_by(Anomaly.timestamp.desc()).limit(limit)
-        anomalias = query.all()
-        
-        return [
-            {
-                'id': a.id,
-                'timestamp': a.timestamp,
-                'value': a.value,
-                'tipo_anomalia': a.tipo_anomalia,
-                'severidad': a.severidad,
-                'metodo_deteccion': a.metodo_deteccion,
-                'descripcion': a.descripcion,
-                'fecha_deteccion': a.fecha_deteccion
-            }
-            for a in anomalias
-        ]
+    # Usar obtener_registros para anomalias también
 
 
-def obtener_ultimas_metricas(modelo=None, limit=10, app=None):
-    """
-    Obtiene las últimas métricas guardadas.
-    
-    Args:
-        modelo: Filtrar por modelo (opcional)
-        limit: Límite de registros (por defecto: 10)
-    
-    Returns:
-        list: Lista de diccionarios con las métricas
-    """
-    with app.app_context():
-        query = ModelMetric.query
-        
-        if modelo:
-            query = query.filter(ModelMetric.nombre_modelo == modelo)
-        
-        query = query.order_by(ModelMetric.timestamp.desc()).limit(limit)
-        metricas = query.all()
-        
-        return [
-            {
-                'id': m.id,
-                'nombre_modelo': m.nombre_modelo,
-                'timestamp': m.timestamp,
-                'mape': m.mape,
-                'smape': m.smape,
-                'rmse': m.rmse,
-                'mae': m.mae,
-                'r2': m.r2,
-                'n_samples': m.n_samples,
-                'metadata': json.loads(m.metadata_json) if m.metadata_json else None
-            }
-            for m in metricas
-        ]
+    # Usar obtener_registros para métricas también
 
 
 #################################################################################
@@ -280,45 +143,47 @@ def obtener_ultimas_metricas(modelo=None, limit=10, app=None):
 #################################################################################
 
 
-def limpiar_predicciones_antiguas(dias=30, app=None):
+def limpiar_registros_antiguos(model_class, session, fecha_field, dias=30):
     """
-    Elimina predicciones más antiguas de X días.
-    
+    Elimina registros más antiguos de X días en la tabla indicada por model_class.
     Args:
-        dias: Número de días a mantener (por defecto: 30)
-    
+        model_class: clase del modelo SQLAlchemy
+        session: sesión de SQLAlchemy
+        fecha_field: campo de fecha para filtrar
+        dias: número de días a mantener
     Returns:
-        int: Número de registros eliminados
+        int: número de registros eliminados
     """
-    with app.app_context():
-        fecha_limite = datetime.now() - timedelta(days=dias)
-        eliminadas = Prediction.query.filter(
-            Prediction.fecha_generacion < fecha_limite
-        ).delete()
-        
-        db.session.commit()
-        print(f"   ✓ Eliminadas {eliminadas} predicciones antiguas")
-        return eliminadas
+    fecha_limite = datetime.now() - timedelta(days=dias)
+    eliminadas = session.query(model_class).filter(
+        getattr(model_class, fecha_field) < fecha_limite
+    ).delete()
+    session.commit()
+    print(f"   ✓ Eliminadas {eliminadas} registros antiguos")
+    return eliminadas
 
 
-def obtener_estadisticas(app = None):
+def obtener_estadisticas(session, model_classes):
     """
-    Obtiene estadísticas generales de las tablas.
-    
+    Obtiene estadísticas generales de las tablas indicadas.
+    Args:
+        session: sesión de SQLAlchemy
+        model_classes: dict con nombres y clases de modelos
     Returns:
-        dict: Diccionario con estadísticas
+        dict: estadísticas
     """
-    with app.app_context():
-        total_predicciones = Prediction.query.count()
-        total_anomalias = Anomaly.query.count()
-        total_metricas = ModelMetric.query.count()
-        
-        return {
-            'total_predicciones': total_predicciones,
-            'total_anomalias': total_anomalias,
-            'total_metricas': total_metricas,
-            'modelos_unicos': db.session.query(Prediction.modelo_usado).distinct().count(),
-            'ultima_prediccion': Prediction.query.order_by(
+    stats = {}
+    for nombre, model_class in model_classes.items():
+        stats[f'total_{nombre}'] = session.query(model_class).count()
+    # Ejemplo para modelos únicos y última predicción si existen los campos
+    if 'predicciones' in model_classes:
+        Prediction = model_classes['predicciones']
+        stats['modelos_unicos'] = session.query(Prediction.modelo_usado).distinct().count()
+        total_predicciones = stats['total_predicciones']
+        if total_predicciones > 0:
+            stats['ultima_prediccion'] = session.query(Prediction).order_by(
                 Prediction.fecha_generacion.desc()
-            ).first().fecha_generacion if total_predicciones > 0 else None
-        }
+            ).first().fecha_generacion
+        else:
+            stats['ultima_prediccion'] = None
+    return stats
