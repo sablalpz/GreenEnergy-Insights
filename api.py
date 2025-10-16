@@ -449,7 +449,8 @@ def health_check():
     """
     try:
         # Verificar conexión a BD
-        db.session.execute('SELECT 1')
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
 
         return jsonify({
             "status": "healthy",

@@ -58,6 +58,7 @@ graficos/*.svg
 *.db
 *.sqlite
 *.sqlite3
+instance/
 
 # Variables de entorno (IMPORTANTE)
 .env
@@ -83,6 +84,10 @@ htmlcov/
 *.temp
 ~$*.docx
 ~$*.xlsx
+
+# Documentación interna (no compartir)
+QUICK_REFERENCE.md
+ESTRUCTURA_PROYECTO.md
 
 # OS
 Thumbs.db

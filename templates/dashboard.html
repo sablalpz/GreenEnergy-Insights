@@ -479,21 +479,37 @@
 
         async function cargarDatos() {
             try {
-                // Cargar estadísticas
+                // Cargar estadísticas de anomalías
                 const statsResponse = await fetch('/api/anomalies/stats');
+                if (!statsResponse.ok) throw new Error('Error al cargar estadísticas de anomalías');
                 const stats = await statsResponse.json();
-                actualizarEstadisticas(stats);
+
+                // Cargar estadísticas de datos de energía
+                const energyStatsResponse = await fetch('/api/energy_data/stats');
+                if (!energyStatsResponse.ok) throw new Error('Error al cargar estadísticas de energía');
+                const energyStats = await energyStatsResponse.json();
+
+                // Cargar estadísticas de predicciones
+                const predictionsStatsResponse = await fetch('/api/predictions/stats');
+                if (!predictionsStatsResponse.ok) throw new Error('Error al cargar estadísticas de predicciones');
+                const predictionsStats = await predictionsStatsResponse.json();
+
+                // Actualizar estadísticas en las tarjetas
+                actualizarEstadisticas(stats, energyStats, predictionsStats);
 
                 // Cargar datos de energía
                 const energyResponse = await fetch('/api/energy_data/recent?days=7');
+                if (!energyResponse.ok) throw new Error('Error al cargar datos de energía');
                 const energyData = await energyResponse.json();
 
                 // Cargar anomalías
                 const anomaliesResponse = await fetch('/api/anomalies?limit=200');
+                if (!anomaliesResponse.ok) throw new Error('Error al cargar anomalías');
                 const anomaliesData = await anomaliesResponse.json();
 
                 // Cargar predicciones
                 const predictionsResponse = await fetch('/api/predictions/recent?limit=50');
+                if (!predictionsResponse.ok) throw new Error('Error al cargar predicciones');
                 const predictionsData = await predictionsResponse.json();
 
                 // Actualizar gráficos
@@ -509,12 +525,16 @@
 
             } catch (error) {
                 console.error('Error cargando datos:', error);
+                document.getElementById('lastUpdate').textContent =
+                    `Error: ${error.message}`;
             }
         }
 
-        function actualizarEstadisticas(stats) {
+        function actualizarEstadisticas(stats, energyStats, predictionsStats) {
             document.getElementById('totalAnomalias').textContent = stats.total_anomalies || 0;
             document.getElementById('anomaliasCriticas').textContent = stats.critical_last_24h || 0;
+            document.getElementById('totalPredicciones').textContent = predictionsStats.total_predictions || 0;
+            document.getElementById('totalDatos').textContent = energyStats.total_records || 0;
         }
 
         async function cargarAnomalias() {
@@ -604,6 +624,8 @@
             actualizarGraficoSeveridad(stats.by_severity || {});
             actualizarGraficoTipos(stats.by_type || {});
             actualizarGraficoPredicciones(energyData, predictionsData);
+            actualizarGraficoAnomaliasTiempo(anomaliesData);
+            actualizarGraficoDiario(stats.by_day || []);
         }
 
         function actualizarGraficoIntegrado(energyData, anomaliesData, predictionsData) {
@@ -740,9 +762,118 @@
             });
         }
 
+        function actualizarGraficoAnomaliasTiempo(anomaliesData) {
+            const ctx = document.getElementById('anomaliesTimeChart');
+            if (!ctx) return;
+
+            if (charts.anomaliesTime) charts.anomaliesTime.destroy();
+
+            // Agrupar anomalías por severidad
+            const groupedData = {
+                'critica': [],
+                'alta': [],
+                'media': [],
+                'baja': []
+            };
+
+            anomaliesData.forEach(a => {
+                if (groupedData[a.severidad]) {
+                    groupedData[a.severidad].push({x: new Date(a.timestamp), y: a.value});
+                }
+            });
+
+            charts.anomaliesTime = new Chart(ctx.getContext('2d'), {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Crítica',
+                            data: groupedData['critica'],
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                            pointRadius: 8
+                        },
+                        {
+                            label: 'Alta',
+                            data: groupedData['alta'],
+                            backgroundColor: 'rgba(255, 152, 0, 0.8)',
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Media',
+                            data: groupedData['media'],
+                            backgroundColor: 'rgba(33, 150, 243, 0.8)',
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Baja',
+                            data: groupedData['baja'],
+                            backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            title: { display: true, text: 'Fecha' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Valor (GWh)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        }
+
+        function actualizarGraficoDiario(byDay) {
+            const ctx = document.getElementById('dailyChart');
+            if (!ctx) return;
+
+            if (charts.daily) charts.daily.destroy();
+
+            const labels = byDay.map(d => d.fecha);
+            const data = byDay.map(d => d.count);
+
+            charts.daily = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Anomalías',
+                        data: data,
+                        backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                        borderColor: 'rgb(33, 150, 243)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
         function actualizarTablaPredictions(predictions) {
             const tbody = document.getElementById('predictionsTable');
             tbody.innerHTML = '';
+
+            if (!predictions || predictions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay predicciones disponibles</td></tr>';
+                return;
+            }
 
             predictions.slice(0, 24).forEach(pred => {
                 const tr = document.createElement('tr');
@@ -754,7 +885,7 @@
                     <td>${fecha}</td>
                     <td><strong>${pred.prediccion.toFixed(2)}</strong></td>
                     <td><small class="text-muted">${intervalo}</small></td>
-                    <td><span class="badge bg-primary">${pred.modelo_usado}</span></td>
+                    <td><span class="badge bg-primary">${pred.modelo_usado || 'N/A'}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -762,56 +893,129 @@
 
         async function cargarMetricas() {
             try {
-                // Aquí deberías tener un endpoint que devuelva las métricas
-                // Por ahora, mostramos un placeholder
+                // Intentar cargar métricas reales del endpoint
+                const response = await fetch('/api/metrics/latest');
                 const metricsDiv = document.getElementById('metricsCards');
-                metricsDiv.innerHTML = `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="text-muted">MAPE</h6>
-                                    <h3 class="text-success">5.2%</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="text-muted">RMSE</h6>
-                                    <h3 class="text-info">12.5</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="text-muted">MAE</h6>
-                                    <h3 class="text-warning">8.3</h3>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="text-muted">R²</h6>
-                                    <h3 class="text-primary">0.92</h3>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
                 const modelInfoDiv = document.getElementById('modelInfo');
-                modelInfoDiv.innerHTML = `
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-robot me-2"></i>Modelo Activo: Prophet</h6>
-                        <p class="mb-0">Entrenado con 1000+ registros históricos. Última actualización: ${new Date().toLocaleString()}</p>
-                    </div>
-                `;
+
+                if (response.ok) {
+                    const metrics = await response.json();
+
+                    // Mostrar métricas reales
+                    metricsDiv.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">MAPE</h6>
+                                        <h3 class="text-success">${metrics.mape ? metrics.mape.toFixed(2) + '%' : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">RMSE</h6>
+                                        <h3 class="text-info">${metrics.rmse ? metrics.rmse.toFixed(2) : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">MAE</h6>
+                                        <h3 class="text-warning">${metrics.mae ? metrics.mae.toFixed(2) : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">R²</h6>
+                                        <h3 class="text-primary">${metrics.r2 ? metrics.r2.toFixed(3) : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    modelInfoDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-robot me-2"></i>Modelo Activo: ${metrics.nombre_modelo || 'Prophet'}</h6>
+                            <p class="mb-0">
+                                ${metrics.dataset_size ? `Entrenado con ${metrics.dataset_size} registros. ` : ''}
+                                Última actualización: ${new Date(metrics.created_at || Date.now()).toLocaleString()}
+                            </p>
+                        </div>
+                    `;
+
+                    // Actualizar gráfico de métricas
+                    actualizarGraficoMetricas(metrics);
+                } else {
+                    // Mostrar mensaje si no hay métricas disponibles
+                    metricsDiv.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No hay métricas de modelo disponibles aún.
+                        </div>
+                    `;
+
+                    modelInfoDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-robot me-2"></i>Modelo: En espera</h6>
+                            <p class="mb-0">Ejecute el motor de predicciones para generar métricas.</p>
+                        </div>
+                    `;
+                }
             } catch (error) {
                 console.error('Error cargando métricas:', error);
+                const metricsDiv = document.getElementById('metricsCards');
+                metricsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Error al cargar métricas: ${error.message}
+                    </div>
+                `;
             }
+        }
+
+        function actualizarGraficoMetricas(metrics) {
+            const ctx = document.getElementById('metricsChart');
+            if (!ctx) return;
+
+            if (charts.metrics) charts.metrics.destroy();
+
+            const metricsData = [
+                { label: 'MAPE (%)', value: metrics.mape || 0, color: 'rgba(76, 175, 80, 0.7)' },
+                { label: 'RMSE', value: metrics.rmse || 0, color: 'rgba(33, 150, 243, 0.7)' },
+                { label: 'MAE', value: metrics.mae || 0, color: 'rgba(255, 152, 0, 0.7)' },
+                { label: 'R² (x100)', value: (metrics.r2 || 0) * 100, color: 'rgba(156, 39, 176, 0.7)' }
+            ];
+
+            charts.metrics = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: metricsData.map(m => m.label),
+                    datasets: [{
+                        label: 'Valor',
+                        data: metricsData.map(m => m.value),
+                        backgroundColor: metricsData.map(m => m.color),
+                        borderColor: metricsData.map(m => m.color.replace('0.7', '1')),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
         }
 
         // Event listeners para las pestañas

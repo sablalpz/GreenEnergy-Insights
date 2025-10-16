@@ -329,13 +329,13 @@ class MotorAnalitica:
         """Detección usando Z-Score"""
         mean = df['value'].mean()
         std = df['value'].std()
-        
+
         df_clean = df[df['value'].notna()].copy()
         df_clean['zscore'] = np.abs((df_clean['value'] - mean) / std)
         df_clean['es_anomalia'] = df_clean['zscore'] > self.umbral_anomalia
-        
+
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['zscore'].apply(
                 lambda x: 'critica' if x > 4 else 'alta' if x > 3.5 else 'media'
@@ -344,23 +344,25 @@ class MotorAnalitica:
                 lambda x: TipoAnomalia.PICO.value if x > mean else TipoAnomalia.CAIDA.value
             )
             anomalias['anomaly_score'] = anomalias['zscore']
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            # Retornar DataFrame vacío con las columnas correctas
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     def _detectar_iqr(self, df):
         """Detección usando Rango Intercuartílico (IQR)"""
         Q1 = df['value'].quantile(0.25)
         Q3 = df['value'].quantile(0.75)
         IQR = Q3 - Q1
-        
+
         limite_inferior = Q1 - 1.5 * IQR
         limite_superior = Q3 + 1.5 * IQR
-        
+
         df_clean = df[df['value'].notna()].copy()
         df_clean['es_anomalia'] = (df_clean['value'] < limite_inferior) | (df_clean['value'] > limite_superior)
-        
+
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['value'].apply(
                 lambda x: 'critica' if x < Q1 - 3*IQR or x > Q3 + 3*IQR else 'alta'
@@ -369,52 +371,55 @@ class MotorAnalitica:
                 lambda x: TipoAnomalia.CAIDA.value if x < limite_inferior else TipoAnomalia.PICO.value
             )
             anomalias['anomaly_score'] = np.abs(anomalias['value'] - df['value'].median()) / IQR
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     def _detectar_isolation_forest(self, df):
         """Detección usando Isolation Forest"""
         df_clean = df[df['value'].notna()].copy()
-        
+
         if len(df_clean) < 10:
-            return pd.DataFrame()
-        
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
+
         modelo_if = IsolationForest(contamination=0.1, random_state=42)
         predicciones = modelo_if.fit_predict(df_clean[['value']])
         scores = modelo_if.score_samples(df_clean[['value']])
-        
+
         df_clean['es_anomalia'] = predicciones == -1
         df_clean['anomaly_score'] = -scores
-        
+
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['anomaly_score'].apply(
                 lambda x: 'critica' if x > 0.7 else 'alta' if x > 0.5 else 'media'
             )
             anomalias['tipo_anomalia'] = TipoAnomalia.PATRON_ANOMALO.value
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     def _detectar_cambios_bruscos(self, df):
         """Detección de cambios bruscos entre valores consecutivos"""
         df_clean = df[df['value'].notna()].copy()
         df_clean = df_clean.sort_values('timestamp')
-        
+
         df_clean['diff'] = df_clean['value'].diff().abs()
         umbral_cambio = df_clean['diff'].std() * 2
-        
+
         df_clean['es_anomalia'] = df_clean['diff'] > umbral_cambio
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['diff'].apply(
                 lambda x: 'critica' if x > umbral_cambio * 2 else 'alta'
             )
             anomalias['tipo_anomalia'] = TipoAnomalia.CAMBIO_BRUSCO.value
             anomalias['anomaly_score'] = anomalias['diff'] / umbral_cambio
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     # =========================================================================
     # MÓDULO 3: MÉTRICAS Y EVALUACIÓN
