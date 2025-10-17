@@ -25,11 +25,11 @@ def ejecutar_motor():
 
         # 1. Cargar datos desde la BD
         print("\n1. Cargando datos desde la base de datos...")
-        energy_records = EnergyData.query.filter(EnergyData.precio != None).order_by(EnergyData.timestamp).all()
+        energy_records = EnergyData.query.filter(EnergyData.demanda != None).order_by(EnergyData.timestamp).all()
 
         if len(energy_records) < 24:
             print(f"Error: Se necesitan al menos 24 registros. Solo hay {len(energy_records)}")
-            print("Ejecuta primero: curl http://127.0.0.1:5000/fetch_ree_data")
+            print("Ejecuta primero: python generar_datos_sinteticos.py")
             return
 
         print(f"   [OK] Se cargaron {len(energy_records)} registros")
@@ -37,7 +37,7 @@ def ejecutar_motor():
         # Convertir a DataFrame
         df = pd.DataFrame([{
             'timestamp': r.timestamp,
-            'value': r.precio
+            'value': r.demanda
         } for r in energy_records])
 
         print(f"   [OK] Rango de datos: {df['timestamp'].min()} a {df['timestamp'].max()}")
@@ -61,6 +61,12 @@ def ejecutar_motor():
         # 3. Generar predicciones
         print("\n3. Generando predicciones para las proximas 24 horas...")
         try:
+            # Limpiar predicciones antiguas primero
+            print("   [INFO] Limpiando predicciones antiguas...")
+            Prediction.query.delete()
+            db.session.commit()
+            print("   [OK] Predicciones antiguas eliminadas")
+
             predicciones_df = motor.predecir(horizonte_horas=24)
             print(f"   [OK] Se generaron {len(predicciones_df)} predicciones")
 
@@ -86,6 +92,12 @@ def ejecutar_motor():
         # 4. Detectar anomalias
         print("\n4. Detectando anomalias...")
         try:
+            # Limpiar anomalías antiguas primero
+            print("   [INFO] Limpiando anomalías antiguas...")
+            Anomaly.query.delete()
+            db.session.commit()
+            print("   [OK] Anomalías antiguas eliminadas")
+
             anomalias_df = motor.detectar_anomalias(
                 df,
                 metodos=['zscore', 'iqr', 'isolation_forest', 'cambios_bruscos']

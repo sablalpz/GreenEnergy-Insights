@@ -80,6 +80,7 @@ class MotorAnalitica:
         self.metricas_test = {}
         self.df_train = None
         self.df_test = None
+        self.df_completo = None  # Guardar dataset completo para predicciones
         
     # =========================================================================
     # MÓDULO 1: PREDICCIÓN
@@ -98,11 +99,14 @@ class MotorAnalitica:
         """
         if len(df) < 100:
             raise ValueError(f"Se necesitan al menos 100 registros para entrenar. Tienes {len(df)}")
-        
+
         # Validar columnas requeridas
         if 'timestamp' not in df.columns or 'value' not in df.columns:
             raise ValueError("El DataFrame debe tener columnas 'timestamp' y 'value'")
-        
+
+        # Guardar dataset completo
+        self.df_completo = df.copy()
+
         # Dividir en train/test
         split_idx = int(len(df) * (1 - test_size))
         self.df_train = df.iloc[:split_idx].copy()
@@ -124,12 +128,21 @@ class MotorAnalitica:
             raise ValueError(f"Tipo de modelo no soportado: {self.tipo_modelo}")
         
         self.entrenado = True
-        
-        # Evaluar en test
-        predicciones_test = self.predecir(horizonte_horas=len(self.df_test))
+
+        # Evaluar en test - generar predicciones para el período de test
+        if self.tipo_modelo == 'prophet':
+            # Para Prophet, predecir usando los timestamps exactos del test set
+            df_test_prophet = self.df_test[['timestamp']].rename(columns={'timestamp': 'ds'})
+            forecast_test = self.modelo.predict(df_test_prophet)
+            predicciones_test_values = forecast_test['yhat'].values
+        else:
+            # Para otros modelos, usar el método normal
+            predicciones_test = self.predecir(horizonte_horas=len(self.df_test))
+            predicciones_test_values = predicciones_test['prediccion'].values
+
         self.metricas_test = self._calcular_metricas(
             self.df_test['value'].values,
-            predicciones_test['prediccion'].values
+            predicciones_test_values
         )
         
         print(f"Modelo {self.tipo_modelo} entrenado exitosamente!")
@@ -207,17 +220,18 @@ class MotorAnalitica:
     def predecir(self, horizonte_horas=24):
         """
         Genera predicciones para las próximas N horas.
-        
+
         Args:
             horizonte_horas: Número de horas a predecir
-            
+
         Returns:
             DataFrame con predicciones y opcionalmente intervalos de confianza
         """
         if not self.entrenado:
             raise ValueError("El modelo no ha sido entrenado. Llama primero a entrenar()")
-        
-        ultimo_timestamp = self.df_train['timestamp'].max()
+
+        # Usar el timestamp del dataset COMPLETO, no solo del train
+        ultimo_timestamp = self.df_completo['timestamp'].max()
         
         if self.tipo_modelo == 'prophet':
             return self._predecir_prophet(horizonte_horas, ultimo_timestamp)
@@ -228,17 +242,19 @@ class MotorAnalitica:
     
     def _predecir_prophet(self, horizonte_horas, ultimo_timestamp):
         """Predicciones con Prophet"""
-        future = self.modelo.make_future_dataframe(periods=horizonte_horas, freq='H')
+        # Crear dataframe solo para fechas futuras
+        future = pd.DataFrame({
+            'ds': pd.date_range(start=ultimo_timestamp + timedelta(hours=1),
+                               periods=horizonte_horas,
+                               freq='H')
+        })
         forecast = self.modelo.predict(future)
-        
-        # Filtrar solo predicciones futuras
-        forecast_futuro = forecast[forecast['ds'] > ultimo_timestamp].head(horizonte_horas)
-        
+
         return pd.DataFrame({
-            'timestamp': forecast_futuro['ds'].values,
-            'prediccion': forecast_futuro['yhat'].values,
-            'limite_inferior': forecast_futuro['yhat_lower'].values,
-            'limite_superior': forecast_futuro['yhat_upper'].values
+            'timestamp': forecast['ds'].values,
+            'prediccion': forecast['yhat'].values,
+            'limite_inferior': forecast['yhat_lower'].values,
+            'limite_superior': forecast['yhat_upper'].values
         })
     
     def _predecir_sklearn(self, horizonte_horas, ultimo_timestamp):
@@ -259,8 +275,8 @@ class MotorAnalitica:
     
     def _predecir_lstm(self, horizonte_horas, ultimo_timestamp):
         """Predicciones con LSTM"""
-        # Obtener últimas 24 horas normalizadas
-        ultimos_valores = self.df_train['value'].tail(24).values.reshape(-1, 1)
+        # Obtener últimas 24 horas normalizadas del dataset completo
+        ultimos_valores = self.df_completo['value'].tail(24).values.reshape(-1, 1)
         ultimos_valores_norm = self.scaler.transform(ultimos_valores)
         
         predicciones = []
