@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from . import db 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from .Config import Config
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
@@ -14,13 +15,28 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 
 
-def create_app():
-    """Crea y configura la aplicación Flask con SQLAlchemy."""
-    app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
-        "SQLALCHEMY_DATABASE_URI", "sqlite:///fallback.db"
-    )
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+def create_app(template_folder: str = None, static_folder: str = None):
+    """Crea y configura la aplicación Flask con SQLAlchemy.
+
+    Permite pasar `template_folder` y `static_folder` para que las apps
+    que usen esta fábrica puedan apuntar a sus recursos estáticos/templates.
+    """
+    # Construir kwargs para Flask si se proporcionan rutas personalizadas
+    flask_kwargs = {}
+    if template_folder:
+        flask_kwargs['template_folder'] = template_folder
+    if static_folder:
+        flask_kwargs['static_folder'] = static_folder
+
+    app = Flask(__name__, **flask_kwargs)
+
+    # Cargar configuración centralizada
+    app.config.from_object(Config)
+
+    # Asegurar valores por defecto si no están en el entorno
+    app.config.setdefault('SQLALCHEMY_DATABASE_URI', os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///fallback.db'))
+    app.config.setdefault('SQLALCHEMY_TRACK_MODIFICATIONS', False)
+
     db.init_app(app)
     return app
 

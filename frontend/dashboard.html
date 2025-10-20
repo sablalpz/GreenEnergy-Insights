@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenEnergy Insights - Dashboard Integrado</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --info-color: #2196f3;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--primary-color);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs .nav-link {
+            color: #666;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            background: transparent;
+        }
+
+        .nav-tabs .nav-link:hover {
+            border-bottom-color: var(--primary-color);
+        }
+
+        .anomaly-item {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .anomaly-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .anomaly-item.critica { border-left-color: var(--danger-color); }
+        .anomaly-item.alta { border-left-color: var(--warning-color); }
+        .anomaly-item.media { border-left-color: var(--info-color); }
+        .anomaly-item.baja { border-left-color: var(--success-color); }
+
+        .severity-badge {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .severity-critica { background-color: var(--danger-color); color: white; }
+        .severity-alta { background-color: var(--warning-color); color: white; }
+        .severity-media { background-color: var(--info-color); color: white; }
+        .severity-baja { background-color: var(--success-color); color: white; }
+
+        .prediction-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .filter-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .metric-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header py-3">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-leaf text-success me-2"></i>
+                        GreenEnergy Insights
+                        <small class="text-muted">Dashboard Integrado</small>
+                    </h1>
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="badge bg-success me-2">
+                        <i class="fas fa-circle pulse"></i> En vivo
+                    </span>
+                    <small class="text-muted" id="lastUpdate">Actualizando...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4">
+        <!-- Navegación por pestañas -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                    <i class="fas fa-dashboard me-2"></i>Resumen General
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="anomalies-tab" data-bs-toggle="tab" data-bs-target="#anomalies" type="button">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Anomalías
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="predictions-tab" data-bs-toggle="tab" data-bs-target="#predictions" type="button">
+                    <i class="fas fa-chart-line me-2"></i>Predicciones
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="metrics-tab" data-bs-toggle="tab" data-bs-target="#metrics" type="button">
+                    <i class="fas fa-chart-bar me-2"></i>Métricas del Modelo
+                </button>
+            </li>
+        </ul>
+
+        <!-- Contenido de las pestañas -->
+        <div class="tab-content" id="mainTabsContent">
+
+            <!-- PESTAÑA 1: RESUMEN GENERAL -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <!-- Tarjetas de Estadísticas -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="stat-icon bg-primary me-3">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div>
+                                    <p class="stat-number text-primary" id="totalAnomalias">0</p>
+                                    <p class="stat-label">Total Anomalías</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="stat-icon bg-danger me-3">
+                                    <i class="fas fa-fire"></i>
+                                </div>
+                                <div>
+                                    <p class="stat-number text-danger" id="anomaliasCriticas">0</p>
+                                    <p class="stat-label">Críticas (24h)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="stat-icon bg-success me-3">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div>
+                                    <p class="stat-number text-success" id="totalPredicciones">0</p>
+                                    <p class="stat-label">Predicciones</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card stat-card">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="stat-icon bg-info me-3">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <div>
+                                    <p class="stat-number text-info" id="totalDatos">0</p>
+                                    <p class="stat-label">Registros Históricos</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico Principal Integrado -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-area me-2"></i>Vista Integrada: Histórico, Predicciones y Anomalías</h5>
+                            <canvas id="integratedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos de Distribución -->
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-pie me-2"></i>Distribución por Severidad</h5>
+                            <canvas id="severityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-doughnut me-2"></i>Tipos de Anomalías</h5>
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 2: ANOMALÍAS -->
+            <div class="tab-pane fade" id="anomalies" role="tabpanel">
+                <!-- Panel de Filtros -->
+                <div class="filter-panel">
+                    <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filtros</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" class="form-control" id="fechaInicio">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" class="form-control" id="fechaFin">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Severidad</label>
+                            <select class="form-select" id="filtroSeveridad">
+                                <option value="">Todas</option>
+                                <option value="critica">Crítica</option>
+                                <option value="alta">Alta</option>
+                                <option value="media">Media</option>
+                                <option value="baja">Baja</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" id="filtroTipo">
+                                <option value="">Todos</option>
+                                <option value="pico">Pico</option>
+                                <option value="caida">Caída</option>
+                                <option value="cambio_brusco">Cambio Brusco</option>
+                                <option value="patron_anomalo">Patrón Anómalo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="aplicarFiltros()">
+                                <i class="fas fa-search me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Anomalías en el Tiempo -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-area me-2"></i>Anomalías en el Tiempo</h5>
+                            <canvas id="anomaliesTimeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Anomalías por Día</h5>
+                            <canvas id="dailyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Anomalías -->
+                <div class="chart-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Anomalías Detectadas</h5>
+                        <button class="btn btn-outline-primary btn-sm" onclick="cargarAnomalias()">
+                            <i class="fas fa-sync-alt me-1"></i>Actualizar
+                        </button>
+                    </div>
+
+                    <div class="loading-spinner" id="loadingSpinner">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Cargando anomalías...</p>
+                    </div>
+
+                    <div style="max-height: 600px; overflow-y: auto;" id="anomalyList">
+                        <!-- Se cargarán dinámicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 3: PREDICCIONES -->
+            <div class="tab-pane fade" id="predictions" role="tabpanel">
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-line me-2"></i>Predicciones vs Datos Históricos</h5>
+                            <canvas id="predictionsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Predicciones -->
+                <div class="chart-container">
+                    <h5 class="mb-3"><i class="fas fa-table me-2"></i>Predicciones Detalladas (Próximas 24 horas)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha y Hora</th>
+                                    <th>Predicción (GWh)</th>
+                                    <th>Intervalo de Confianza</th>
+                                    <th>Modelo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictionsTable">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Cargando predicciones...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 4: MÉTRICAS DEL MODELO -->
+            <div class="tab-pane fade" id="metrics" role="tabpanel">
+                <div class="row g-4 mb-4">
+                    <!-- Tarjeta de Métricas Principales -->
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-tachometer-alt me-2"></i>Métricas de Rendimiento</h5>
+                            <div id="metricsCards">
+                                <div class="text-center text-muted py-4">
+                                    <div class="spinner-border" role="status"></div>
+                                    <p class="mt-2">Cargando métricas...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico Comparativo de Métricas -->
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Comparación de Métricas</h5>
+                            <canvas id="metricsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información del Modelo -->
+                <div class="chart-container">
+                    <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Información del Modelo</h5>
+                    <div id="modelInfo">
+                        <div class="text-center text-muted py-4">Cargando información...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Variables globales
+        let charts = {};
+        let currentData = {};
+
+        // Inicializar dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            inicializarFechas();
+            cargarDatos();
+            setInterval(cargarDatos, 60000); // Actualizar cada minuto
+        });
+
+        function inicializarFechas() {
+            const hoy = new Date();
+            const hace7dias = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+            document.getElementById('fechaInicio').value = hace7dias.toISOString().split('T')[0];
+            document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
+        }
+
+        async function cargarDatos() {
+            try {
+                // Cargar estadísticas de anomalías
+                const statsResponse = await fetch('/api/anomalies/stats');
+                if (!statsResponse.ok) throw new Error('Error al cargar estadísticas de anomalías');
+                const stats = await statsResponse.json();
+
+                // Cargar estadísticas de datos de energía
+                const energyStatsResponse = await fetch('/api/energy_data/stats');
+                if (!energyStatsResponse.ok) throw new Error('Error al cargar estadísticas de energía');
+                const energyStats = await energyStatsResponse.json();
+
+                // Cargar estadísticas de predicciones
+                const predictionsStatsResponse = await fetch('/api/predictions/stats');
+                if (!predictionsStatsResponse.ok) throw new Error('Error al cargar estadísticas de predicciones');
+                const predictionsStats = await predictionsStatsResponse.json();
+
+                // Actualizar estadísticas en las tarjetas
+                actualizarEstadisticas(stats, energyStats, predictionsStats);
+
+                // Cargar datos de energía
+                const energyResponse = await fetch('/api/energy_data/recent?days=7');
+                if (!energyResponse.ok) throw new Error('Error al cargar datos de energía');
+                const energyData = await energyResponse.json();
+
+                // Cargar anomalías
+                const anomaliesResponse = await fetch('/api/anomalies?limit=200');
+                if (!anomaliesResponse.ok) throw new Error('Error al cargar anomalías');
+                const anomaliesData = await anomaliesResponse.json();
+
+                // Cargar predicciones
+                const predictionsResponse = await fetch('/api/predictions/recent?limit=50');
+                if (!predictionsResponse.ok) throw new Error('Error al cargar predicciones');
+                const predictionsData = await predictionsResponse.json();
+
+                // Actualizar gráficos
+                actualizarGraficos(energyData, anomaliesData, predictionsData, stats);
+                actualizarTablaPredictions(predictionsData);
+
+                // Cargar métricas del modelo
+                cargarMetricas();
+
+                // Actualizar timestamp
+                document.getElementById('lastUpdate').textContent =
+                    `Última actualización: ${new Date().toLocaleString()}`;
+
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                document.getElementById('lastUpdate').textContent =
+                    `Error: ${error.message}`;
+            }
+        }
+
+        function actualizarEstadisticas(stats, energyStats, predictionsStats) {
+            document.getElementById('totalAnomalias').textContent = stats.total_anomalies || 0;
+            document.getElementById('anomaliasCriticas').textContent = stats.critical_last_24h || 0;
+            document.getElementById('totalPredicciones').textContent = predictionsStats.total_predictions || 0;
+            document.getElementById('totalDatos').textContent = energyStats.total_records || 0;
+        }
+
+        async function cargarAnomalias() {
+            const container = document.getElementById('anomalyList');
+            const spinner = document.getElementById('loadingSpinner');
+
+            try {
+                spinner.style.display = 'block';
+
+                const params = new URLSearchParams();
+                const fechaInicio = document.getElementById('fechaInicio').value;
+                const fechaFin = document.getElementById('fechaFin').value;
+                const severidad = document.getElementById('filtroSeveridad').value;
+                const tipo = document.getElementById('filtroTipo').value;
+
+                if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+                if (fechaFin) params.append('fecha_fin', fechaFin);
+                if (severidad) params.append('severidad', severidad);
+                if (tipo) params.append('tipo', tipo);
+                params.append('limit', '100');
+
+                const response = await fetch(`/api/anomalies?${params}`);
+                const anomalies = await response.json();
+
+                container.innerHTML = '';
+
+                if (anomalies.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted py-4">No se encontraron anomalías</div>';
+                } else {
+                    anomalies.forEach(anomaly => {
+                        container.appendChild(crearItemAnomalia(anomaly));
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = '<div class="text-center text-danger py-4">Error al cargar anomalías</div>';
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        function crearItemAnomalia(anomaly) {
+            const div = document.createElement('div');
+            div.className = `anomaly-item ${anomaly.severidad}`;
+
+            const fecha = new Date(anomaly.timestamp).toLocaleString();
+
+            div.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <span class="severity-badge severity-${anomaly.severidad} me-2">
+                            ${anomaly.severidad.toUpperCase()}
+                        </span>
+                        <span class="badge bg-light text-dark">${anomaly.tipo_anomalia}</span>
+                        <div class="mt-2">
+                            <strong>Valor:</strong> ${anomaly.value.toFixed(2)} GWh<br>
+                            <small class="text-muted"><i class="fas fa-clock me-1"></i>${fecha}</small>
+                        </div>
+                    </div>
+                    <div>
+                        ${getSeverityIcon(anomaly.severidad)}
+                    </div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        function getSeverityIcon(severidad) {
+            const icons = {
+                'critica': '<i class="fas fa-fire text-danger fs-3"></i>',
+                'alta': '<i class="fas fa-exclamation-triangle text-warning fs-3"></i>',
+                'media': '<i class="fas fa-info-circle text-info fs-3"></i>',
+                'baja': '<i class="fas fa-check-circle text-success fs-3"></i>'
+            };
+            return icons[severidad] || '<i class="fas fa-question-circle text-secondary fs-3"></i>';
+        }
+
+        function aplicarFiltros() {
+            cargarAnomalias();
+        }
+
+        function actualizarGraficos(energyData, anomaliesData, predictionsData, stats) {
+            // Implementar gráficos (similar al código original pero optimizado)
+            actualizarGraficoIntegrado(energyData, anomaliesData, predictionsData);
+            actualizarGraficoSeveridad(stats.by_severity || {});
+            actualizarGraficoTipos(stats.by_type || {});
+            actualizarGraficoPredicciones(energyData, predictionsData);
+            actualizarGraficoAnomaliasTiempo(anomaliesData);
+            actualizarGraficoDiario(stats.by_day || []);
+        }
+
+        function actualizarGraficoIntegrado(energyData, anomaliesData, predictionsData) {
+            const ctx = document.getElementById('integratedChart');
+            if (!ctx) return;
+
+            if (charts.integrated) charts.integrated.destroy();
+
+            charts.integrated = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Datos Históricos',
+                            data: energyData.map(d => ({x: new Date(d.timestamp), y: d.demanda})),
+                            borderColor: 'rgb(76, 175, 80)',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Predicciones',
+                            data: predictionsData.map(p => ({x: new Date(p.timestamp), y: p.prediccion})),
+                            borderColor: 'rgb(33, 150, 243)',
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: 'Anomalías',
+                            data: anomaliesData.map(a => ({x: new Date(a.timestamp), y: a.value})),
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                            pointRadius: 6,
+                            showLine: false,
+                            type: 'scatter'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { type: 'time' },
+                        y: { title: { display: true, text: 'Demanda (GWh)' }}
+                    }
+                }
+            });
+        }
+
+        function actualizarGraficoSeveridad(bySeverity) {
+            const ctx = document.getElementById('severityChart');
+            if (!ctx) return;
+
+            if (charts.severity) charts.severity.destroy();
+
+            const labels = Object.keys(bySeverity);
+            const data = Object.values(bySeverity);
+            const colors = ['#f44336', '#ff9800', '#2196f3', '#4caf50'];
+
+            charts.severity = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' }}
+                }
+            });
+        }
+
+        function actualizarGraficoTipos(byType) {
+            const ctx = document.getElementById('typeChart');
+            if (!ctx) return;
+
+            if (charts.type) charts.type.destroy();
+
+            const labels = Object.keys(byType);
+            const data = Object.values(byType);
+
+            charts.type = new Chart(ctx.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: labels.map(l => l.replace('_', ' ').toUpperCase()),
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' }}
+                }
+            });
+        }
+
+        function actualizarGraficoPredicciones(energyData, predictionsData) {
+            const ctx = document.getElementById('predictionsChart');
+            if (!ctx) return;
+
+            if (charts.predictions) charts.predictions.destroy();
+
+            // Últimas 48 horas de histórico
+            const historico = energyData.slice(-48);
+
+            charts.predictions = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Histórico',
+                            data: historico.map(d => ({x: new Date(d.timestamp), y: d.demanda})),
+                            borderColor: 'rgb(76, 175, 80)',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Predicciones',
+                            data: predictionsData.map(p => ({x: new Date(p.timestamp), y: p.prediccion})),
+                            borderColor: 'rgb(33, 150, 243)',
+                            borderDash: [5, 5],
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { type: 'time' },
+                        y: { title: { display: true, text: 'Demanda (GWh)' }}
+                    }
+                }
+            });
+        }
+
+        function actualizarGraficoAnomaliasTiempo(anomaliesData) {
+            const ctx = document.getElementById('anomaliesTimeChart');
+            if (!ctx) return;
+
+            if (charts.anomaliesTime) charts.anomaliesTime.destroy();
+
+            // Agrupar anomalías por severidad
+            const groupedData = {
+                'critica': [],
+                'alta': [],
+                'media': [],
+                'baja': []
+            };
+
+            anomaliesData.forEach(a => {
+                if (groupedData[a.severidad]) {
+                    groupedData[a.severidad].push({x: new Date(a.timestamp), y: a.value});
+                }
+            });
+
+            charts.anomaliesTime = new Chart(ctx.getContext('2d'), {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Crítica',
+                            data: groupedData['critica'],
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                            pointRadius: 8
+                        },
+                        {
+                            label: 'Alta',
+                            data: groupedData['alta'],
+                            backgroundColor: 'rgba(255, 152, 0, 0.8)',
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Media',
+                            data: groupedData['media'],
+                            backgroundColor: 'rgba(33, 150, 243, 0.8)',
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Baja',
+                            data: groupedData['baja'],
+                            backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            title: { display: true, text: 'Fecha' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Valor (GWh)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        }
+
+        function actualizarGraficoDiario(byDay) {
+            const ctx = document.getElementById('dailyChart');
+            if (!ctx) return;
+
+            if (charts.daily) charts.daily.destroy();
+
+            const labels = byDay.map(d => d.fecha);
+            const data = byDay.map(d => d.count);
+
+            charts.daily = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Anomalías',
+                        data: data,
+                        backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                        borderColor: 'rgb(33, 150, 243)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function actualizarTablaPredictions(predictions) {
+            const tbody = document.getElementById('predictionsTable');
+            tbody.innerHTML = '';
+
+            if (!predictions || predictions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay predicciones disponibles</td></tr>';
+                return;
+            }
+
+            predictions.slice(0, 24).forEach(pred => {
+                const tr = document.createElement('tr');
+                const fecha = new Date(pred.timestamp).toLocaleString();
+                const intervalo = pred.limite_inferior && pred.limite_superior ?
+                    `${pred.limite_inferior.toFixed(2)} - ${pred.limite_superior.toFixed(2)}` : 'N/A';
+
+                tr.innerHTML = `
+                    <td>${fecha}</td>
+                    <td><strong>${pred.prediccion.toFixed(2)}</strong></td>
+                    <td><small class="text-muted">${intervalo}</small></td>
+                    <td><span class="badge bg-primary">${pred.modelo_usado || 'N/A'}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function cargarMetricas() {
+            try {
+                // Intentar cargar métricas reales del endpoint
+                const response = await fetch('/api/metrics/latest');
+                const metricsDiv = document.getElementById('metricsCards');
+                const modelInfoDiv = document.getElementById('modelInfo');
+
+                if (response.ok) {
+                    const metrics = await response.json();
+
+                    // Mostrar métricas reales
+                    metricsDiv.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">MAPE</h6>
+                                        <h3 class="text-success">${metrics.mape ? metrics.mape.toFixed(2) + '%' : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">RMSE</h6>
+                                        <h3 class="text-info">${metrics.rmse ? metrics.rmse.toFixed(2) : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">MAE</h6>
+                                        <h3 class="text-warning">${metrics.mae ? metrics.mae.toFixed(2) : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="text-muted">R²</h6>
+                                        <h3 class="text-primary">${metrics.r2 ? metrics.r2.toFixed(3) : 'N/A'}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    modelInfoDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-robot me-2"></i>Modelo Activo: ${metrics.nombre_modelo || 'Prophet'}</h6>
+                            <p class="mb-0">
+                                ${metrics.dataset_size ? `Entrenado con ${metrics.dataset_size} registros. ` : ''}
+                                Última actualización: ${new Date(metrics.created_at || Date.now()).toLocaleString()}
+                            </p>
+                        </div>
+                    `;
+
+                    // Actualizar gráfico de métricas
+                    actualizarGraficoMetricas(metrics);
+                } else {
+                    // Mostrar mensaje si no hay métricas disponibles
+                    metricsDiv.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No hay métricas de modelo disponibles aún.
+                        </div>
+                    `;
+
+                    modelInfoDiv.innerHTML = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-robot me-2"></i>Modelo: En espera</h6>
+                            <p class="mb-0">Ejecute el motor de predicciones para generar métricas.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error cargando métricas:', error);
+                const metricsDiv = document.getElementById('metricsCards');
+                metricsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Error al cargar métricas: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function actualizarGraficoMetricas(metrics) {
+            const ctx = document.getElementById('metricsChart');
+            if (!ctx) return;
+
+            if (charts.metrics) charts.metrics.destroy();
+
+            const metricsData = [
+                { label: 'MAPE (%)', value: metrics.mape || 0, color: 'rgba(76, 175, 80, 0.7)' },
+                { label: 'RMSE', value: metrics.rmse || 0, color: 'rgba(33, 150, 243, 0.7)' },
+                { label: 'MAE', value: metrics.mae || 0, color: 'rgba(255, 152, 0, 0.7)' },
+                { label: 'R² (x100)', value: (metrics.r2 || 0) * 100, color: 'rgba(156, 39, 176, 0.7)' }
+            ];
+
+            charts.metrics = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: metricsData.map(m => m.label),
+                    datasets: [{
+                        label: 'Valor',
+                        data: metricsData.map(m => m.value),
+                        backgroundColor: metricsData.map(m => m.color),
+                        borderColor: metricsData.map(m => m.color.replace('0.7', '1')),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Event listeners para las pestañas
+        document.getElementById('anomalies-tab').addEventListener('shown.bs.tab', function () {
+            cargarAnomalias();
+        });
+    </script>
+</body>
+</html>

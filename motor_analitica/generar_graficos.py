@@ -67,8 +67,14 @@ print()
 # ==============================================================================
 # Generar predicciones
 # ==============================================================================
-print("[3/5] Generando predicciones...")
-predicciones = motor.predecir(horizonte_horas=48)
+# Determinar horizonte por argumento (si se ejecuta desde backend)
+try:
+    horizonte_horas = int(sys.argv[1]) if len(sys.argv) > 1 else 48
+except Exception:
+    horizonte_horas = 48
+
+print(f"[3/5] Generando predicciones (horizonte={horizonte_horas} horas)...")
+predicciones = motor.predecir(horizonte_horas=horizonte_horas)
 print(f"   Predicciones: {len(predicciones)} horas")
 print()
 

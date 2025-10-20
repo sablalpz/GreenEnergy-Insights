@@ -80,6 +80,7 @@ class MotorAnalitica:
         self.metricas_test = {}
         self.df_train = None
         self.df_test = None
+        self.df_completo = None  # Guardar dataset completo para predicciones
         
     # =========================================================================
     # MÓDULO 1: PREDICCIÓN
@@ -98,11 +99,14 @@ class MotorAnalitica:
         """
         if len(df) < 100:
             raise ValueError(f"Se necesitan al menos 100 registros para entrenar. Tienes {len(df)}")
-        
+
         # Validar columnas requeridas
         if 'timestamp' not in df.columns or 'value' not in df.columns:
             raise ValueError("El DataFrame debe tener columnas 'timestamp' y 'value'")
-        
+
+        # Guardar dataset completo
+        self.df_completo = df.copy()
+
         # Dividir en train/test
         split_idx = int(len(df) * (1 - test_size))
         self.df_train = df.iloc[:split_idx].copy()
@@ -124,12 +128,21 @@ class MotorAnalitica:
             raise ValueError(f"Tipo de modelo no soportado: {self.tipo_modelo}")
         
         self.entrenado = True
-        
-        # Evaluar en test
-        predicciones_test = self.predecir(horizonte_horas=len(self.df_test))
+
+        # Evaluar en test - generar predicciones para el período de test
+        if self.tipo_modelo == 'prophet':
+            # Para Prophet, predecir usando los timestamps exactos del test set
+            df_test_prophet = self.df_test[['timestamp']].rename(columns={'timestamp': 'ds'})
+            forecast_test = self.modelo.predict(df_test_prophet)
+            predicciones_test_values = forecast_test['yhat'].values
+        else:
+            # Para otros modelos, usar el método normal
+            predicciones_test = self.predecir(horizonte_horas=len(self.df_test))
+            predicciones_test_values = predicciones_test['prediccion'].values
+
         self.metricas_test = self._calcular_metricas(
             self.df_test['value'].values,
-            predicciones_test['prediccion'].values
+            predicciones_test_values
         )
         
         print(f"Modelo {self.tipo_modelo} entrenado exitosamente!")
@@ -207,17 +220,18 @@ class MotorAnalitica:
     def predecir(self, horizonte_horas=24):
         """
         Genera predicciones para las próximas N horas.
-        
+
         Args:
             horizonte_horas: Número de horas a predecir
-            
+
         Returns:
             DataFrame con predicciones y opcionalmente intervalos de confianza
         """
         if not self.entrenado:
             raise ValueError("El modelo no ha sido entrenado. Llama primero a entrenar()")
-        
-        ultimo_timestamp = self.df_train['timestamp'].max()
+
+        # Usar el timestamp del dataset COMPLETO, no solo del train
+        ultimo_timestamp = self.df_completo['timestamp'].max()
         
         if self.tipo_modelo == 'prophet':
             return self._predecir_prophet(horizonte_horas, ultimo_timestamp)
@@ -228,17 +242,19 @@ class MotorAnalitica:
     
     def _predecir_prophet(self, horizonte_horas, ultimo_timestamp):
         """Predicciones con Prophet"""
-        future = self.modelo.make_future_dataframe(periods=horizonte_horas, freq='H')
+        # Crear dataframe solo para fechas futuras
+        future = pd.DataFrame({
+            'ds': pd.date_range(start=ultimo_timestamp + timedelta(hours=1),
+                               periods=horizonte_horas,
+                               freq='H')
+        })
         forecast = self.modelo.predict(future)
-        
-        # Filtrar solo predicciones futuras
-        forecast_futuro = forecast[forecast['ds'] > ultimo_timestamp].head(horizonte_horas)
-        
+
         return pd.DataFrame({
-            'timestamp': forecast_futuro['ds'].values,
-            'prediccion': forecast_futuro['yhat'].values,
-            'limite_inferior': forecast_futuro['yhat_lower'].values,
-            'limite_superior': forecast_futuro['yhat_upper'].values
+            'timestamp': forecast['ds'].values,
+            'prediccion': forecast['yhat'].values,
+            'limite_inferior': forecast['yhat_lower'].values,
+            'limite_superior': forecast['yhat_upper'].values
         })
     
     def _predecir_sklearn(self, horizonte_horas, ultimo_timestamp):
@@ -259,8 +275,8 @@ class MotorAnalitica:
     
     def _predecir_lstm(self, horizonte_horas, ultimo_timestamp):
         """Predicciones con LSTM"""
-        # Obtener últimas 24 horas normalizadas
-        ultimos_valores = self.df_train['value'].tail(24).values.reshape(-1, 1)
+        # Obtener últimas 24 horas normalizadas del dataset completo
+        ultimos_valores = self.df_completo['value'].tail(24).values.reshape(-1, 1)
         ultimos_valores_norm = self.scaler.transform(ultimos_valores)
         
         predicciones = []
@@ -329,13 +345,13 @@ class MotorAnalitica:
         """Detección usando Z-Score"""
         mean = df['value'].mean()
         std = df['value'].std()
-        
+
         df_clean = df[df['value'].notna()].copy()
         df_clean['zscore'] = np.abs((df_clean['value'] - mean) / std)
         df_clean['es_anomalia'] = df_clean['zscore'] > self.umbral_anomalia
-        
+
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['zscore'].apply(
                 lambda x: 'critica' if x > 4 else 'alta' if x > 3.5 else 'media'
@@ -344,23 +360,25 @@ class MotorAnalitica:
                 lambda x: TipoAnomalia.PICO.value if x > mean else TipoAnomalia.CAIDA.value
             )
             anomalias['anomaly_score'] = anomalias['zscore']
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            # Retornar DataFrame vacío con las columnas correctas
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     def _detectar_iqr(self, df):
         """Detección usando Rango Intercuartílico (IQR)"""
         Q1 = df['value'].quantile(0.25)
         Q3 = df['value'].quantile(0.75)
         IQR = Q3 - Q1
-        
+
         limite_inferior = Q1 - 1.5 * IQR
         limite_superior = Q3 + 1.5 * IQR
-        
+
         df_clean = df[df['value'].notna()].copy()
         df_clean['es_anomalia'] = (df_clean['value'] < limite_inferior) | (df_clean['value'] > limite_superior)
-        
+
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['value'].apply(
                 lambda x: 'critica' if x < Q1 - 3*IQR or x > Q3 + 3*IQR else 'alta'
@@ -369,52 +387,55 @@ class MotorAnalitica:
                 lambda x: TipoAnomalia.CAIDA.value if x < limite_inferior else TipoAnomalia.PICO.value
             )
             anomalias['anomaly_score'] = np.abs(anomalias['value'] - df['value'].median()) / IQR
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     def _detectar_isolation_forest(self, df):
         """Detección usando Isolation Forest"""
         df_clean = df[df['value'].notna()].copy()
-        
+
         if len(df_clean) < 10:
-            return pd.DataFrame()
-        
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
+
         modelo_if = IsolationForest(contamination=0.1, random_state=42)
         predicciones = modelo_if.fit_predict(df_clean[['value']])
         scores = modelo_if.score_samples(df_clean[['value']])
-        
+
         df_clean['es_anomalia'] = predicciones == -1
         df_clean['anomaly_score'] = -scores
-        
+
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['anomaly_score'].apply(
                 lambda x: 'critica' if x > 0.7 else 'alta' if x > 0.5 else 'media'
             )
             anomalias['tipo_anomalia'] = TipoAnomalia.PATRON_ANOMALO.value
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     def _detectar_cambios_bruscos(self, df):
         """Detección de cambios bruscos entre valores consecutivos"""
         df_clean = df[df['value'].notna()].copy()
         df_clean = df_clean.sort_values('timestamp')
-        
+
         df_clean['diff'] = df_clean['value'].diff().abs()
         umbral_cambio = df_clean['diff'].std() * 2
-        
+
         df_clean['es_anomalia'] = df_clean['diff'] > umbral_cambio
         anomalias = df_clean[df_clean['es_anomalia']].copy()
-        
+
         if len(anomalias) > 0:
             anomalias['severidad'] = anomalias['diff'].apply(
                 lambda x: 'critica' if x > umbral_cambio * 2 else 'alta'
             )
             anomalias['tipo_anomalia'] = TipoAnomalia.CAMBIO_BRUSCO.value
             anomalias['anomaly_score'] = anomalias['diff'] / umbral_cambio
-        
-        return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+            return anomalias[['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score']]
+        else:
+            return pd.DataFrame(columns=['timestamp', 'value', 'tipo_anomalia', 'severidad', 'anomaly_score'])
     
     # =========================================================================
     # MÓDULO 3: MÉTRICAS Y EVALUACIÓN

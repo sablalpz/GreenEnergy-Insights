@@ -85,7 +85,7 @@ while True:
         break
 
     # Detección de intención de consulta de datos
-    if any(p in user_input.lower() for p in ["consumo", "predicción", "energia", "anomalía", "anomalia"]):
+    if any(p in user_input.lower() for p in ["consumo", "predicción", "energia", "anomalía"]):
         # Extraer fecha y hora de la pregunta 
         import re
         fecha_match = re.search(r"\b(\d{1,2}-\d{1,2}-\d{4})\b", user_input)

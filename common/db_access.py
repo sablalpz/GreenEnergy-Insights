@@ -1,5 +1,6 @@
 # db_manager.py
 from common import db  # importa db y modelo desde tu ETL (api.py)
+from sqlalchemy import cast, Date
 from datetime import datetime, timedelta
 import json
 
@@ -130,6 +131,116 @@ def obtener_registros(model_class, session, filters=None, order_by=None, limit=1
     query = query.limit(limit)
     registros = query.all()
     return [row_to_dict(r, columns) for r in registros]
+
+
+def obtener_todos(model_class, session, order_by=None, columns=None):
+    """
+    Obtiene todos los registros de una tabla (sin límite). Usar con precaución.
+    """
+    query = session.query(model_class)
+    if order_by:
+        if order_by.endswith('.desc()'):
+            col = order_by.replace('.desc()', '')
+            query = query.order_by(getattr(model_class, col).desc())
+        else:
+            query = query.order_by(getattr(model_class, order_by))
+    registros = query.all()
+    return [row_to_dict(r, columns) for r in registros]
+
+
+def obtener_registros_rango(model_class, session, date_field, start=None, end=None, order_by=None, limit=100, columns=None):
+    """
+    Obtiene registros filtrando por un rango de fechas sobre `date_field`.
+    start/end pueden ser datetime o cadenas ISO.
+    """
+    query = session.query(model_class)
+    if start:
+        if isinstance(start, str):
+            from datetime import datetime
+            start = datetime.fromisoformat(start)
+        query = query.filter(getattr(model_class, date_field) >= start)
+    if end:
+        if isinstance(end, str):
+            from datetime import datetime
+            end = datetime.fromisoformat(end)
+        query = query.filter(getattr(model_class, date_field) <= end)
+    if order_by:
+        if order_by.endswith('.desc()'):
+            col = order_by.replace('.desc()', '')
+            query = query.order_by(getattr(model_class, col).desc())
+        else:
+            query = query.order_by(getattr(model_class, order_by))
+    if limit:
+        query = query.limit(limit)
+    registros = query.all()
+    return [row_to_dict(r, columns) for r in registros]
+
+
+def obtener_estadisticas_tabla(session, model_class, date_field='timestamp'):
+    """
+    Obtiene estadísticas comunes para una tabla: total, primer y último registro y días cubiertos.
+    """
+    total = session.query(model_class).count()
+    if total == 0:
+        return {"total_records": 0, "first_record": None, "last_record": None, "days_covered": 0}
+
+    primer = session.query(model_class).order_by(getattr(model_class, date_field).asc()).first()
+    ultimo = session.query(model_class).order_by(getattr(model_class, date_field).desc()).first()
+    days = (ultimo.__dict__[date_field] - primer.__dict__[date_field]).days if primer and ultimo else 0
+    return {
+        "total_records": total,
+        "first_record": getattr(primer, date_field).isoformat() if primer else None,
+        "last_record": getattr(ultimo, date_field).isoformat() if ultimo else None,
+        "days_covered": days
+    }
+
+
+def obtener_agg_anomalias(session, anomaly_model):
+    """
+    Obtiene agregados usados por /api/anomalies/stats: totals por severidad, tipo, por día y críticas 24h.
+    Devuelve dict con las mismas claves que el endpoint esperaba.
+    """
+    from datetime import datetime, timedelta
+
+    # total
+    total_anomalies = session.query(db.func.count(anomaly_model.id)).scalar()
+
+    # por severidad
+    severidades = session.query(
+        anomaly_model.severidad,
+        db.func.count(anomaly_model.id)
+    ).group_by(anomaly_model.severidad).all()
+
+    # por tipo
+    tipos = session.query(
+        anomaly_model.tipo_anomalia,
+        db.func.count(anomaly_model.id)
+    ).group_by(anomaly_model.tipo_anomalia).all()
+
+    fecha_limite = datetime.utcnow() - timedelta(days=7)
+    # Agrupar por fecha (sin hora) — usar cast a DATE para compatibilidad con SQL Server
+    fecha_expr = cast(anomaly_model.timestamp, Date)
+    por_dia = session.query(
+        fecha_expr.label('fecha'),
+        db.func.count(anomaly_model.id).label('count')
+    ).filter(anomaly_model.timestamp >= fecha_limite).group_by(
+        fecha_expr
+    ).order_by(fecha_expr).all()
+
+    fecha_24h = datetime.utcnow() - timedelta(hours=24)
+    criticas_recientes = session.query(anomaly_model).filter(
+        anomaly_model.severidad == 'critica',
+        anomaly_model.timestamp >= fecha_24h
+    ).count()
+
+    return {
+        "total_anomalies": total_anomalies,
+        "by_severity": dict(severidades),
+        "by_type": dict(tipos),
+        "by_day": [{"fecha": str(fecha), "count": count} for fecha, count in por_dia],
+        "critical_last_24h": criticas_recientes,
+        "last_update": datetime.utcnow().isoformat()
+    }
 
 
     # Usar obtener_registros para anomalias también

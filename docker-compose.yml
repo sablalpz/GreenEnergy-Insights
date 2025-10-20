@@ -5,11 +5,13 @@ services:
       context: ./backend
     container_name: backend
     ports:
-      - "5002:5000"
+      - "5002:5010"
     env_file:
       - .env
     volumes:
       - ./common:/app/common
+      - ./motor_analitica:/app/motor_analitica
+      - ./frontend:/app/frontend
     restart: unless-stopped
     environment:
       PYTHONPATH: /app
@@ -19,6 +21,8 @@ services:
     build:
       context: ./etl
     container_name: etl
+    ports:
+      - "5003:5002"
     env_file:
       - .env
     volumes:
@@ -35,6 +39,7 @@ services:
       - .env
     volumes:
       - ./common:/app/common
+      - ./motor_analitica:/app/motor_analitica
     restart: unless-stopped
     environment:
       PYTHONPATH: /app
