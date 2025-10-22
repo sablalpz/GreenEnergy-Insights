@@ -21,7 +21,7 @@ password = "SYfL1sTc5EQzehpOjopx"
 conn = pyodbc.connect(
     f"DRIVER={{ODBC Driver 18 for SQL Server}};"
     f"SERVER={server};DATABASE={database};UID={username};PWD={password};"
-    f"Encrypt=yes;TrustServerCertificate=no;Connection Timeout=50;"
+    f"Encrypt=yes;TrustServerCertificate=no;Connection Timeout=80;"
 )
 cursor = conn.cursor()
 
@@ -175,40 +175,41 @@ while True:
         print("Chatbot: Adiós.")
         break
 
-    intencion = detectar_intencion(user_input)
+def responder_chat(user_input):
+    t = (user_input or "").strip()
+    if not t:
+        return "Por favor, escribe una pregunta."
 
-    if intencion in ("consulta_real", "consulta_prediccion", "consulta_precio"):
-        fecha, hora = extraer_fecha_hora(user_input)
+    intencion = detectar_intencion(t)
+
+    if intencion in ("consulta_real", "consulta_prediccion", "consulta_precio", "consulta_dia_semana"):
+        fecha, hora = extraer_fecha_hora(t)
         if not (fecha and hora):
-            if detectar_intencion("cómo " + user_input) == "explicacion":
+            # Si no hay fecha/hora válidas, redirige a explicación o general
+            if detectar_intencion("cómo " + t) == "explicacion":
                 intencion = "explicacion"
             else:
                 intencion = "general"
         else:
             tabla = "predictions" if intencion == "consulta_prediccion" else "energy_data"
-            resultado = consultar_base(tabla, fecha, hora)
-            if resultado:
-                fila, cols = resultado
-                print(formatear_respuesta_sql(tabla, fila, cols, fecha, hora, intencion))
-                continue
+            result = consultar_base(tabla, fecha, hora)
+            if result:
+                fila, cols = result
+                return formatear_respuesta_sql(tabla, fila, cols, fecha, hora, intencion)
             else:
-                print("No se encontraron datos cercanos a esa fecha y hora.")
-                continue
+                return "No se encontraron datos cercanos a esa fecha y hora."
 
     if intencion == "explicacion":
-        contexto = recuperar_conocimiento(user_input)
-        prompt = prompt_explicacion(user_input, contexto)
-        respuesta = generar_respuesta(prompt, max_tokens=220)
-        print("Chatbot:", respuesta)
-        continue
+        contexto = recuperar_conocimiento(t)
+        prompt = prompt_explicacion(t, contexto)
+        return generar_respuesta(prompt, max_tokens=220)
 
-    #para preguntas generales 
-    contexto = recuperar_conocimiento(user_input)
+    # General
+    contexto = recuperar_conocimiento(t)
     prompt = (
         "Eres experto en redes eléctricas. Responde de forma clara y concisa.\n\n"
         f"Contexto (opcional): {contexto}\n\n"
-        f"Pregunta: {user_input}\n"
+        f"Pregunta: {t}\n"
         "Respuesta:"
     )
-    respuesta = generar_respuesta(prompt, max_tokens=200)
-    print("Chatbot:", respuesta)
+    return generar_respuesta(prompt, max_tokens=200)

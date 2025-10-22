@@ -1,5 +1,4 @@
-# db_manager.py
-from common import db  # importa db y modelo desde tu ETL (api.py)
+from common import db  
 from sqlalchemy import cast, Date
 from datetime import datetime, timedelta
 import json

@@ -32,4 +32,4 @@ RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/wh
 RUN pip install --no-cache-dir -r /app/requirements.chatbot.txt
 
 # Ejecutable por defecto: lanza el script interactivo
-ENTRYPOINT ["python", "Chatbotbases.py"]
+ENTRYPOINT ["python", "Streamlit.py"]
