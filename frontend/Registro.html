@@ -1,0 +1,44 @@
+<!doctype html>
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Registro - GreenEnergy Insights</title>
+            </head>
+            <body>
+                <h2>Registro de usuario</h2>
+                <form id="regForm">
+                    <label>Usuario: <input type="text" id="username" required></label><br><br>
+                    <label>Contraseña: <input type="password" id="password" required></label><br><br>
+                    <button type="submit">Registrar</button>
+                </form>
+                <div id="result" style="margin-top:15px;color:green"></div>
+
+                <script>
+                document.getElementById('regForm').addEventListener('submit', async function(e){
+                    e.preventDefault();
+                    const u = document.getElementById('username').value;
+                    const p = document.getElementById('password').value;
+                    try{
+                        const res = await fetch('/api/register', {
+                            method: 'POST',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({username: u, password: p})
+                        });
+                        const j = await res.json();
+                        if(res.ok){
+                            document.getElementById('result').style.color='green';
+                            document.getElementById('result').innerText = j.message || JSON.stringify(j);
+                        } else {
+                            document.getElementById('result').style.color='red';
+                            document.getElementById('result').innerText = j.error || JSON.stringify(j);
+                        }
+                    } catch(err){
+                        document.getElementById('result').style.color='red';
+                        document.getElementById('result').innerText = 'Error: '+err;
+                    }
+                });
+                </script>
+            </body>
+        </html>
+        '''
+        return render_template_string(html)
