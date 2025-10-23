@@ -55,6 +55,7 @@ services:
     volumes:
       - ./common:/app/common
       - ./chatbot:/app/chatbot
+      - ./model_cache:/root/.cache/huggingface
     restart: unless-stopped
     environment:
       PYTHONPATH: /app  
