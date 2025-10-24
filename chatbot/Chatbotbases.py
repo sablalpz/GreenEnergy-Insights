@@ -90,7 +90,7 @@ def recuperar_conocimiento(pregunta):
         return ""
 
 
-def generar_respuesta(prompt, max_tokens=400):
+def generar_respuesta(prompt, max_tokens=300):
     """
     Genera texto largo, coherente y detallado.
     Ajustes:
@@ -116,6 +116,8 @@ def generar_respuesta(prompt, max_tokens=400):
     texto = tokenizer.decode(outputs[0], skip_special_tokens=True)
     texto = re.sub(r"(Exercise\s*\d*:.*|Answer:)", "", texto, flags=re.IGNORECASE)
     texto = texto.replace("Eres experto en redes eléctricas.", "").strip()
+    texto = texto.replace("<|endofgeneration|>", "")
+    texto = texto.replace(prompt, "")
     return texto
 
 
@@ -217,7 +219,7 @@ def responder_chat(user_input):
     if intencion == "explicacion":
         contexto = recuperar_conocimiento(t)
         prompt = prompt_explicacion(t, contexto)
-        return generar_respuesta(prompt, max_tokens=400)
+        return generar_respuesta(prompt, max_tokens=300)
 
 
     contexto = recuperar_conocimiento(t)
@@ -232,5 +234,5 @@ def responder_chat(user_input):
         f"Pregunta del usuario: {user_input}\n\n"
         "Respuesta:"
     )
-    return generar_respuesta(prompt, max_tokens=400)
+    return generar_respuesta(prompt, max_tokens=300)
 
