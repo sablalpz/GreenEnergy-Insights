@@ -81,7 +81,34 @@ def fetch_ree_data():
             continue
 
     db.session.commit()
-    return jsonify({"message": f"Proceso ETL completado. {new_records} nuevos datos guardados."})
+
+    #  EJECUTAR MOTOR ANALÍTICO SI HAY DATOS NUEVOS
+
+    if new_records > 0:
+        print(f"Se agregaron {new_records} nuevos registros. Ejecutando motor analítico...")
+        try:
+            # Llamar al endpoint del motor analítico
+            motor_url = "http://localhost:5000/api/motor/execute"
+            response = requests.post(motor_url, timeout=300)  # 5 min timeout
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(" Motor analítico ejecutado exitosamente:")
+                print(f"   - Predicciones: {result['results']['predicciones_generadas']}")
+                print(f"   - Anomalías: {result['results']['anomalias_detectadas']}")
+            else:
+                print(f"Error al ejecutar motor: {response.status_code}")
+                print(f"   Respuesta: {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f" Error de conexión con motor analítico: {e}")
+        except Exception as e:
+            print(f"Error inesperado al ejecutar motor: {e}")
+    
+    return jsonify({
+        "message": f"Proceso ETL completado. {new_records} nuevos datos guardados.",
+        "motor_executed": new_records > 0
+    })
 
 
 # Endpoint para consultar datos
