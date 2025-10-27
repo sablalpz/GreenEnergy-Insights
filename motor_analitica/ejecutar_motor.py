@@ -3,7 +3,7 @@ Script para ejecutar el motor de analítica y poblar la base de datos
 con predicciones y anomalías.
 """
 
-from motor_analitica.motor_analitica import MotorAnalitica
+from motor_analitica import MotorAnalitica
 from common import db, create_app, Config, EnergyData, Prediction, Anomaly, ModelMetric
 import pandas as pd
 from datetime import datetime

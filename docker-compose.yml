@@ -1,4 +1,17 @@
 services:
+  scheduler:
+    build:
+      context: ./motor_analitica
+    container_name: scheduler
+    env_file:
+      - .env
+    volumes:
+      - ./common:/app/common
+      - ./motor_analitica:/app/motor_analitica
+    restart: unless-stopped
+    environment:
+      PYTHONPATH: /app
+    command: ["python", "motor_analitica/scheduler.py"]
   
   backend:
     build:

@@ -1,0 +1,25 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment
+.venv/
+env/
+venv/
+.env
+
+# Logs and instance
+logs/
+instance/
+
+# Model cache and large downloads
+model_cache/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# VSCode
+.vscode/

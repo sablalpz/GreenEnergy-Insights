@@ -31,3 +31,7 @@ seaborn>=0.12.0
 # Utilidades
 python-dateutil>=2.8.0
 
+# Scheduler y utilidades
+apscheduler>=3.11.0
+python-dotenv>=1.0.0
+
