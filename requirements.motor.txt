@@ -1,0 +1,67 @@
+# ============================================================================
+# Dependencias completas para el contenedor Docker del motor_analitica
+# Incluye librerías de web, acceso a BD, análisis de datos, ML, visualización
+# y utilidades comunes. Ajusta versiones si encuentras conflictos en tu entorno.
+# ============================================================================
+
+# --------------------------
+# Base / Web / BD
+# --------------------------
+flask>=2.2.5
+flask_sqlalchemy>=3.0.3
+requests>=2.31.0
+pyodbc>=4.0.35
+sqlalchemy>=2.0.19
+
+# Gunicorn para ejecutar la app en producción dentro del contenedor
+gunicorn>=20.1.0
+
+# --------------------------
+# Ciencia de datos / ML
+# --------------------------
+numpy>=1.24.0
+pandas>=2.0.3
+scipy>=1.11.1
+joblib>=1.3.2
+scikit-learn>=1.3.2
+
+# Prophet para series temporales (moderno) y su backend de compilación
+prophet>=1.1.5
+cmdstanpy>=1.0.0
+
+# Deep Learning (opcional - activar si se usan modelos LSTM/NN)
+tensorflow>=2.15.0
+keras>=2.15.0
+
+# --------------------------
+# Visualización
+# --------------------------
+matplotlib>=3.7.1
+seaborn>=0.12.2
+
+# --------------------------
+# Utilidades y fechas
+# --------------------------
+python-dateutil>=2.8.2
+pytz>=2023.3
+tqdm>=4.65.0
+pyyaml>=6.0
+
+# --------------------------
+# Utilidades de desarrollo/packaging (útiles en Docker build)
+# --------------------------
+wheel>=0.40.0
+setuptools>=68.0.0
+
+# --------------------------
+# Notas / Paquetes opcionales
+# --------------------------
+# - Si usas PostgreSQL en producción, añade: psycopg2-binary
+# - Si usas Redis para caching/cola, añade: redis
+# - Si prefieres Uvicorn/FastAPI en vez de Flask, añade: uvicorn[standard] and fastapi
+# - Mantén tensorflow y keras comentados/omitidos si no usarás deep learning en el contenedor
+# - Prophet puede requerir build tools (cmake, make) en la imagen base; considera usar una imagen
+#   con las herramientas de compilación instaladas o usar wheels precompilados.
+
+# EOF
+
